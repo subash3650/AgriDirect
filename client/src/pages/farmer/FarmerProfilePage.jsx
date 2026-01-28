@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import LocationPicker from '../../components/shared/LocationPicker';
 import './Farmer.css';
 
 const FarmerProfilePage = () => {
@@ -11,6 +12,7 @@ const FarmerProfilePage = () => {
     const [saving, setSaving] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showLocationModal, setShowLocationModal] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
     const [formData, setFormData] = useState({
         name: '',
@@ -19,38 +21,9 @@ const FarmerProfilePage = () => {
         city: '',
         state: '',
         pin: '',
-        location: { coordinates: [], address: '' }
+        location: { type: 'Point', coordinates: [], address: '' }
     });
-    const [mapLoaded, setMapLoaded] = useState(false);
-    const mapRef = useRef(null);
-    const mapInstanceRef = useRef(null);
-    const markerRef = useRef(null);
-    const leafletRef = useRef(null);
 
-    
-    useEffect(() => {
-        if (window.L) {
-            leafletRef.current = window.L;
-            setMapLoaded(true);
-            return;
-        }
-
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-        document.head.appendChild(link);
-
-        const script = document.createElement('script');
-        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-        script.async = true;
-        script.onload = () => {
-            leafletRef.current = window.L;
-            setMapLoaded(true);
-        };
-        document.head.appendChild(script);
-    }, []);
-
-    
     useEffect(() => {
         const fetchProfile = async () => {
             try {
@@ -68,7 +41,7 @@ const FarmerProfilePage = () => {
                         city: data.farmer.city || '',
                         state: data.farmer.state || '',
                         pin: data.farmer.pin || '',
-                        location: data.farmer.location || { coordinates: [], address: '' }
+                        location: data.farmer.location || { type: 'Point', coordinates: [], address: '' }
                     });
                 }
             } catch (error) {
@@ -80,100 +53,15 @@ const FarmerProfilePage = () => {
         fetchProfile();
     }, []);
 
-    
-    useEffect(() => {
-        if (!mapLoaded || !mapRef.current || !leafletRef.current) return;
-
-        const L = leafletRef.current;
-        const initialCenter = formData.location?.coordinates?.length === 2
-            ? [formData.location.coordinates[1], formData.location.coordinates[0]]
-            : [20.5937, 78.9629];
-
-        mapInstanceRef.current = L.map(mapRef.current).setView(initialCenter, formData.location?.coordinates?.length === 2 ? 15 : 5);
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors',
-            maxZoom: 19
-        }).addTo(mapInstanceRef.current);
-
-        if (formData.location?.coordinates?.length === 2) {
-            markerRef.current = L.marker(initialCenter, { draggable: true })
-                .addTo(mapInstanceRef.current)
-                .bindPopup('Your farm location');
-            markerRef.current.on('dragend', (e) => {
-                const { lat, lng } = e.target.getLatLng();
-                updateLocation(lat, lng);
-            });
-        }
-
-        mapInstanceRef.current.on('click', (e) => {
-            const { lat, lng } = e.latlng;
-            placeMarker(lat, lng);
-        });
-
-        return () => {
-            if (mapInstanceRef.current) {
-                mapInstanceRef.current.remove();
-                mapInstanceRef.current = null;
-            }
-        };
-    }, [mapLoaded]);
-
-    const placeMarker = (lat, lng) => {
-        const L = leafletRef.current;
-        if (!L || !mapInstanceRef.current) return;
-
-        if (markerRef.current) {
-            markerRef.current.setLatLng([lat, lng]);
-        } else {
-            markerRef.current = L.marker([lat, lng], { draggable: true })
-                .addTo(mapInstanceRef.current)
-                .bindPopup('Farm location');
-            markerRef.current.on('dragend', (e) => {
-                const { lat, lng } = e.target.getLatLng();
-                updateLocation(lat, lng);
-            });
-        }
-        mapInstanceRef.current.setView([lat, lng], 15);
-        updateLocation(lat, lng);
-    };
-
-    const updateLocation = async (lat, lng) => {
-        try {
-            const response = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
-            );
-            const data = await response.json();
-            setFormData(prev => ({
-                ...prev,
-                location: { coordinates: [lng, lat], address: data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}` }
-            }));
-        } catch {
-            setFormData(prev => ({
-                ...prev,
-                location: { coordinates: [lng, lat], address: `${lat.toFixed(6)}, ${lng.toFixed(6)}` }
-            }));
-        }
-    };
-
-    const getCurrentLocation = () => {
-        if (!navigator.geolocation) {
-            setMessage({ type: 'error', text: 'Geolocation not supported' });
-            return;
-        }
-        setMessage({ type: 'info', text: 'Getting your location...' });
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                placeMarker(position.coords.latitude, position.coords.longitude);
-                setMessage({ type: 'success', text: 'Location updated!' });
-            },
-            () => setMessage({ type: 'error', text: 'Failed to get location.' }),
-            { enableHighAccuracy: true, timeout: 10000 }
-        );
-    };
-
     const handleChange = (e) => {
         setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    };
+
+    const handleLocationChange = (location) => {
+        setFormData(prev => ({
+            ...prev,
+            location: { type: 'Point', ...location }
+        }));
     };
 
     const handleSubmit = async (e) => {
@@ -266,16 +154,26 @@ const FarmerProfilePage = () => {
 
                     <div className="form-section">
                         <h3>Farm Location</h3>
-                        <p style={{ color: '#666', marginBottom: '1rem' }}>Click on map to set your farm location for deliveries</p>
-                        <button type="button" onClick={getCurrentLocation} className="btn btn-secondary" style={{ marginBottom: '1rem' }}>
-                            📍 Use Current Location
-                        </button>
-                        <div ref={mapRef} style={{ height: '300px', borderRadius: '8px', border: '2px solid #ddd' }}></div>
+                        <p style={{ color: '#666', marginBottom: '1rem' }}>Set your farm location for accurate deliveries</p>
+
                         {formData.location?.address && (
-                            <div style={{ background: '#f0fdf4', padding: '1rem', borderRadius: '8px', marginTop: '1rem', borderLeft: '4px solid #22c55e' }}>
-                                <strong>📍 Farm Location:</strong> {formData.location.address}
+                            <div style={{ background: '#f0fdf4', padding: '1rem', borderRadius: '8px', marginBottom: '1rem', borderLeft: '4px solid #22c55e' }}>
+                                <strong>📍 Current Location:</strong> {formData.location.address}
+                                {formData.location?.coordinates?.length === 2 && (
+                                    <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '0.25rem' }}>
+                                        Coordinates: {formData.location.coordinates[1].toFixed(6)}, {formData.location.coordinates[0].toFixed(6)}
+                                    </div>
+                                )}
                             </div>
                         )}
+
+                        <button
+                            type="button"
+                            onClick={() => setShowLocationModal(true)}
+                            className="btn btn-secondary"
+                        >
+                            📍 {formData.location?.address ? 'Update Location' : 'Set Location'}
+                        </button>
                     </div>
 
                     <button type="submit" className="btn btn-primary btn-lg" disabled={saving} style={{ marginTop: '1rem' }}>
@@ -292,15 +190,34 @@ const FarmerProfilePage = () => {
                 </div>
 
                 {showDeleteConfirm && (
-                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-                        <div style={{ background: 'white', padding: '2rem', borderRadius: '12px', maxWidth: '400px', textAlign: 'center' }}>
+                    <div className="modal-overlay" onClick={() => setShowDeleteConfirm(false)}>
+                        <div className="modal" onClick={e => e.stopPropagation()}>
                             <h3 style={{ color: '#dc2626' }}>🚨 Delete Account?</h3>
                             <p style={{ margin: '1rem 0', color: '#666' }}>All products, orders, and data will be permanently deleted.</p>
-                            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                            <div className="modal-actions">
                                 <button onClick={() => setShowDeleteConfirm(false)} className="btn btn-secondary" disabled={deleting}>Cancel</button>
                                 <button onClick={handleDeleteAccount} className="btn" style={{ background: '#dc2626', color: 'white' }} disabled={deleting}>
                                     {deleting ? 'Deleting...' : 'Yes, Delete'}
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {showLocationModal && (
+                    <div className="modal-overlay" onClick={() => setShowLocationModal(false)}>
+                        <div className="modal" style={{ maxWidth: '700px' }} onClick={e => e.stopPropagation()}>
+                            <h2>📍 Update Farm Location</h2>
+                            <p style={{ color: '#666', marginBottom: '1rem' }}>
+                                Select your exact farm location for delivery purposes.
+                            </p>
+                            <LocationPicker
+                                value={formData.location}
+                                onChange={handleLocationChange}
+                            />
+                            <div className="modal-actions" style={{ marginTop: '1.5rem' }}>
+                                <button onClick={() => setShowLocationModal(false)} className="btn btn-secondary">Cancel</button>
+                                <button onClick={() => setShowLocationModal(false)} className="btn btn-primary">Done</button>
                             </div>
                         </div>
                     </div>

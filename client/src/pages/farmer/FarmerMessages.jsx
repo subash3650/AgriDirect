@@ -1,0 +1,402 @@
+import { useState, useEffect, useRef } from 'react';
+import { useSocket } from '../../hooks/useSocket';
+import './Farmer.css';
+
+const FarmerMessages = () => {
+    const { socket, isConnected } = useSocket();
+    const [conversations, setConversations] = useState([]);
+    const [activeConversation, setActiveConversation] = useState(null);
+    const [messages, setMessages] = useState([]);
+    const [newMessage, setNewMessage] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [sending, setSending] = useState(false);
+    const [isTyping, setIsTyping] = useState(false);
+    const [typingUser, setTypingUser] = useState(null);
+    const messagesEndRef = useRef(null);
+
+    // Scroll to bottom when messages change
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
+
+    // Fetch all conversations
+    useEffect(() => {
+        const fetchConversations = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/conversations', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    setConversations(data.conversations);
+                    // Auto-select first conversation if exists
+                    if (data.conversations.length > 0 && !activeConversation) {
+                        setActiveConversation(data.conversations[0]);
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to fetch conversations:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchConversations();
+    }, []);
+
+    // Fetch messages when active conversation changes
+    useEffect(() => {
+        if (!activeConversation) return;
+
+        const fetchMessages = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/conversations/${activeConversation._id}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    setMessages(data.messages);
+                    // Mark as read
+                    fetch(`/api/conversations/${activeConversation._id}/read`, {
+                        method: 'PUT',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                }
+            } catch (err) {
+                console.error('Failed to fetch messages:', err);
+            }
+        };
+
+        fetchMessages();
+
+        // Join conversation room
+        if (socket) {
+            socket.emit('join_conversation', activeConversation._id);
+        }
+
+        return () => {
+            if (socket) {
+                socket.emit('leave_conversation', activeConversation._id);
+            }
+        };
+    }, [activeConversation, socket]);
+
+    // Listen for new messages
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleNewMessage = (data) => {
+            // Add message to current conversation
+            if (activeConversation && data.message.conversationId === activeConversation._id) {
+                setMessages(prev => [...prev, data.message]);
+            }
+            // Update conversation list
+            setConversations(prev => prev.map(conv => {
+                if (conv._id === data.conversation._id) {
+                    return { ...conv, lastMessage: data.conversation.lastMessage };
+                }
+                return conv;
+            }));
+        };
+
+        const handleTyping = (data) => {
+            if (activeConversation && data.conversationId === activeConversation._id) {
+                setIsTyping(data.isTyping);
+                setTypingUser(data.userName);
+            }
+        };
+
+        socket.on('new_message', handleNewMessage);
+        socket.on('user_typing', handleTyping);
+
+        return () => {
+            socket.off('new_message', handleNewMessage);
+            socket.off('user_typing', handleTyping);
+        };
+    }, [socket, activeConversation]);
+
+    const handleSendMessage = async (e) => {
+        e.preventDefault();
+        if (!newMessage.trim() || !activeConversation) return;
+
+        setSending(true);
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`/api/conversations/${activeConversation._id}/messages`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ text: newMessage })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                setMessages(prev => [...prev, data.message]);
+                setNewMessage('');
+                // Update conversation in list
+                setConversations(prev => prev.map(conv => {
+                    if (conv._id === activeConversation._id) {
+                        return {
+                            ...conv,
+                            lastMessage: {
+                                text: newMessage,
+                                senderId: data.message.senderId,
+                                timestamp: data.message.createdAt
+                            }
+                        };
+                    }
+                    return conv;
+                }));
+            }
+        } catch (err) {
+            console.error('Failed to send message:', err);
+        } finally {
+            setSending(false);
+        }
+    };
+
+    const handleTypingChange = (e) => {
+        setNewMessage(e.target.value);
+        if (socket && activeConversation) {
+            socket.emit('typing', { conversationId: activeConversation._id, isTyping: true });
+            // Stop typing after 1 second of no input
+            setTimeout(() => {
+                socket.emit('typing', { conversationId: activeConversation._id, isTyping: false });
+            }, 1000);
+        }
+    };
+
+    const getOtherParticipant = (conversation) => {
+        // Get user ID from stored user object
+        const storedUser = localStorage.getItem('user');
+        const currentUser = storedUser ? JSON.parse(storedUser) : null;
+        const myId = currentUser?._id || currentUser?.id || '';
+
+        // Find the participant that is NOT the current user
+        return conversation.participants?.find(p => {
+            const participantId = p.userId?._id?.toString() || p.userId?.toString() || '';
+            return participantId !== myId;
+        }) || {};
+    };
+
+    const handleDeleteConversation = async (convId, e) => {
+        e.stopPropagation();
+        if (!window.confirm('Are you sure you want to delete this conversation?')) return;
+
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`/api/conversations/${convId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                setConversations(prev => prev.filter(c => c._id !== convId));
+                if (activeConversation?._id === convId) {
+                    setActiveConversation(null);
+                    setMessages([]);
+                }
+            }
+        } catch (err) {
+            console.error('Failed to delete conversation:', err);
+        }
+    };
+
+    const formatTime = (date) => {
+        if (!date) return '';
+        const d = new Date(date);
+        const now = new Date();
+        const diff = now - d;
+
+        if (diff < 86400000) { // Less than 24 hours
+            return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else if (diff < 604800000) { // Less than 7 days
+            return d.toLocaleDateString([], { weekday: 'short' });
+        }
+        return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    };
+
+    // Get current user ID for message alignment
+    const storedUserData = localStorage.getItem('user');
+    const currentUserObj = storedUserData ? JSON.parse(storedUserData) : null;
+    const currentUserId = currentUserObj?._id || currentUserObj?.id || '';
+
+    // Check if message is from current user (handle ObjectId comparison)
+    const isMyMessage = (msg) => {
+        const senderId = msg.senderId?._id?.toString() || msg.senderId?.toString() || '';
+        return senderId === currentUserId;
+    };
+
+    if (loading) {
+        return (
+            <div className="messages-page">
+                <div className="container">
+                    <div className="loading-state">Loading messages...</div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="messages-page">
+            <div className="container">
+                <h1 className="page-title">💬 Messages</h1>
+
+                <div className="messages-layout">
+                    {/* Conversation List (LinkedIn-style sidebar) */}
+                    <div className="conversations-sidebar">
+                        <div className="sidebar-header">
+                            <h3>Conversations</h3>
+                            <span className="connection-status">
+                                {isConnected ? '🟢 Online' : '⚪ Offline'}
+                            </span>
+                        </div>
+
+                        {conversations.length === 0 ? (
+                            <div className="empty-conversations">
+                                <p>No messages yet</p>
+                                <span>When buyers message you, they'll appear here</span>
+                            </div>
+                        ) : (
+                            <div className="conversation-list">
+                                {conversations.map(conv => {
+                                    const other = getOtherParticipant(conv);
+                                    const isActive = activeConversation?._id === conv._id;
+                                    const unread = conv.unreadCount?.get?.(currentUserId) || 0;
+
+                                    return (
+                                        <div
+                                            key={conv._id}
+                                            className={`conversation-item ${isActive ? 'active' : ''}`}
+                                            onClick={() => setActiveConversation(conv)}
+                                        >
+                                            <div className="conv-avatar">
+                                                {other.userType === 'buyer' ? '👤' : '🧑‍🌾'}
+                                            </div>
+                                            <div className="conv-info">
+                                                <div className="conv-header">
+                                                    <span className="conv-name">{other.name || 'Unknown'}</span>
+                                                    <span className="conv-time">
+                                                        {formatTime(conv.lastMessage?.timestamp)}
+                                                    </span>
+                                                </div>
+                                                <div className="conv-preview">
+                                                    <span className="conv-last-message">
+                                                        {conv.lastMessage?.text?.substring(0, 40) || 'No messages'}
+                                                        {conv.lastMessage?.text?.length > 40 ? '...' : ''}
+                                                    </span>
+                                                    {unread > 0 && (
+                                                        <span className="unread-badge">{unread}</span>
+                                                    )}
+                                                </div>
+                                                {conv.productContext?.productName && (
+                                                    <span className="conv-product">
+                                                        📦 {conv.productContext.productName}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <button
+                                                className="conv-delete-btn"
+                                                onClick={(e) => handleDeleteConversation(conv._id, e)}
+                                                title="Delete conversation"
+                                            >
+                                                🗑️
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Chat Window */}
+                    <div className="chat-window">
+                        {!activeConversation ? (
+                            <div className="empty-chat">
+                                <div className="empty-chat-icon">💬</div>
+                                <h3>Select a conversation</h3>
+                                <p>Choose a conversation from the list to start messaging</p>
+                            </div>
+                        ) : (
+                            <>
+                                {/* Chat Header */}
+                                <div className="chat-header-bar">
+                                    <div className="chat-user-info">
+                                        <span className="chat-user-avatar">
+                                            {getOtherParticipant(activeConversation).userType === 'buyer' ? '👤' : '🧑‍🌾'}
+                                        </span>
+                                        <div>
+                                            <h4>{getOtherParticipant(activeConversation).name}</h4>
+                                            <span className="chat-user-type">
+                                                {getOtherParticipant(activeConversation).userType === 'buyer' ? 'Buyer' : 'Farmer'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    {activeConversation.productContext?.productName && (
+                                        <div className="chat-product-context">
+                                            📦 Discussing: {activeConversation.productContext.productName}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Messages Area */}
+                                <div className="chat-messages-area">
+                                    {messages.length === 0 ? (
+                                        <div className="empty-messages">
+                                            <p>No messages in this conversation yet.</p>
+                                            <span>Start the conversation!</span>
+                                        </div>
+                                    ) : (
+                                        messages.map((msg, index) => (
+                                            <div
+                                                key={msg._id || index}
+                                                className={`message-bubble-wrapper ${isMyMessage(msg) ? 'sent' : 'received'}`}
+                                            >
+                                                <div className="message-bubble-content">
+                                                    <p>{msg.text}</p>
+                                                    <span className="message-timestamp">
+                                                        {formatTime(msg.createdAt)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                    {isTyping && (
+                                        <div className="typing-indicator-bar">
+                                            <span>{typingUser || 'Someone'} is typing...</span>
+                                        </div>
+                                    )}
+                                    <div ref={messagesEndRef} />
+                                </div>
+
+                                {/* Message Input */}
+                                <form onSubmit={handleSendMessage} className="chat-input-bar">
+                                    <input
+                                        type="text"
+                                        value={newMessage}
+                                        onChange={handleTypingChange}
+                                        placeholder="Type your message..."
+                                        className="message-input"
+                                    />
+                                    <button
+                                        type="submit"
+                                        className="send-button"
+                                        disabled={sending || !newMessage.trim()}
+                                    >
+                                        {sending ? '...' : '➤'}
+                                    </button>
+                                </form>
+                            </>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default FarmerMessages;

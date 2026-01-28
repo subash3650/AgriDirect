@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getMyOrders, updateOrderStatus } from '../../services/order.service';
+import { getMyOrders, updateOrderStatus, cancelOrder } from '../../services/order.service';
 import { useSocket } from '../../hooks/useSocket';
 import LoadingSpinner from '../../components/shared/LoadingSpinner.jsx';
 import Toast, { useToast } from '../../components/shared/Toast.jsx';
@@ -9,6 +9,7 @@ const OrdersManagement = () => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
+    const [cancelModal, setCancelModal] = useState({ show: false, orderId: null, reason: '' });
     const { notifications } = useSocket();
     const { toasts, success, error } = useToast();
 
@@ -40,6 +41,18 @@ const OrdersManagement = () => {
             fetchOrders();
         } catch (err) {
             error(err.response?.data?.message || 'Failed to update status');
+        }
+    };
+
+    const handleCancelOrder = async (e) => {
+        e.preventDefault();
+        try {
+            await cancelOrder(cancelModal.orderId, cancelModal.reason);
+            success('Order cancelled and buyer notified');
+            setCancelModal({ show: false, orderId: null, reason: '' });
+            fetchOrders();
+        } catch (err) {
+            error(err.response?.data?.message || 'Failed to cancel order');
         }
     };
 
@@ -109,33 +122,72 @@ const OrdersManagement = () => {
                                         <td>{new Date(order.createdAt).toLocaleDateString()}</td>
                                         <td>
                                             {order.status === 'processing' && (
-                                                <button onClick={() => handleStatusUpdate(order._id, 'shipped')}
-                                                    className="btn btn-primary btn-sm">Ship</button>
+                                                <div className="action-buttons">
+                                                    <button onClick={() => handleStatusUpdate(order._id, 'shipped')}
+                                                        className="btn btn-primary btn-sm">Ship</button>
+                                                    <button onClick={() => setCancelModal({ show: true, orderId: order._id, reason: '' })}
+                                                        className="btn btn-outline-danger btn-sm">Cancel</button>
+                                                </div>
                                             )}
                                             {order.status === 'shipped' && (
                                                 <div className="action-column">
-                                                    <button onClick={() => handleStatusUpdate(order._id, 'delivered')}
-                                                        className="btn btn-primary btn-sm">Deliver</button>
-                                                    {order.buyerDetails?.coordinates?.length === 2 && (
-                                                        <a
-                                                            href={`https://www.google.com/maps/dir/?api=1&destination=${order.buyerDetails.coordinates[1]},${order.buyerDetails.coordinates[0]}`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="route-link"
-                                                        >
-                                                            Show Route 📍
-                                                        </a>
-                                                    )}
+                                                    <div className="action-buttons">
+                                                        <button onClick={() => handleStatusUpdate(order._id, 'delivered')}
+                                                            className="btn btn-primary btn-sm">Deliver</button>
+                                                        {order.buyerDetails?.coordinates?.length === 2 && (
+                                                            <a
+                                                                href={`https://www.google.com/maps/dir/?api=1&destination=${order.buyerDetails.coordinates[1]},${order.buyerDetails.coordinates[0]}`}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="route-link"
+                                                            >
+                                                                Show Route 📍
+                                                            </a>
+                                                        )}
+                                                        <button onClick={() => setCancelModal({ show: true, orderId: order._id, reason: '' })}
+                                                            className="btn btn-outline-danger btn-sm">Cancel</button>
+                                                    </div>
                                                 </div>
                                             )}
                                             {order.status === 'pending' && (
-                                                <span className="pending-text">Awaiting OTP</span>
+                                                <div className="action-buttons">
+                                                    <span className="pending-text">Awaiting OTP</span>
+                                                    <button onClick={() => setCancelModal({ show: true, orderId: order._id, reason: '' })}
+                                                        className="btn btn-outline-danger btn-sm">Cancel</button>
+                                                </div>
                                             )}
                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+                )}
+
+                {/* Cancel Modal */}
+                {cancelModal.show && (
+                    <div className="modal-overlay" onClick={() => setCancelModal({ show: false, orderId: null, reason: '' })}>
+                        <div className="modal" onClick={e => e.stopPropagation()}>
+                            <h2>Cancel Order</h2>
+                            <p className="text-muted">Please provide a reason. This will be sent to the buyer via chat.</p>
+                            <form onSubmit={handleCancelOrder}>
+                                <div className="form-group">
+                                    <label>Reason for Cancellation</label>
+                                    <textarea
+                                        value={cancelModal.reason}
+                                        onChange={e => setCancelModal({ ...cancelModal, reason: e.target.value })}
+                                        className="form-input"
+                                        required
+                                        rows="3"
+                                        placeholder="E.g., Out of stock, Quality issue..."
+                                    ></textarea>
+                                </div>
+                                <div className="modal-actions">
+                                    <button type="button" onClick={() => setCancelModal({ show: false, orderId: null, reason: '' })} className="btn btn-secondary">Keep Order</button>
+                                    <button type="submit" className="btn btn-danger">Confirm Cancellation</button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 )}
             </div>

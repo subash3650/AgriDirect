@@ -29,6 +29,7 @@ app.use('/api/orders', require('./routes/orders'));
 app.use('/api/farmers', require('./routes/farmers'));
 app.use('/api/buyers', require('./routes/buyers'));
 app.use('/api/feedback', require('./routes/feedback'));
+app.use('/api/conversations', require('./routes/conversations'));
 
 
 app.use((req, res) => res.status(404).json({ success: false, message: 'Route not found' }));

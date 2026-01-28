@@ -8,7 +8,7 @@ const otpGenerator = require('../utils/otpGenerator');
 const { AppError, asyncHandler } = require('../middleware');
 
 exports.createOrder = asyncHandler(async (req, res, next) => {
-    
+
     const { items } = req.body;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -17,7 +17,7 @@ exports.createOrder = asyncHandler(async (req, res, next) => {
 
     const buyer = req.user;
 
-    
+
     const productIds = items.map(i => i.productId);
     const products = await Product.find({ _id: { $in: productIds } });
 
@@ -25,10 +25,10 @@ exports.createOrder = asyncHandler(async (req, res, next) => {
         return next(new AppError('One or more products not found', 404));
     }
 
-    
+
     const ordersByFarmer = {};
 
-    
+
     for (const item of items) {
         const product = products.find(p => p._id.toString() === item.productId);
         if (product.currentQuantity < item.quantity) {
@@ -53,11 +53,11 @@ exports.createOrder = asyncHandler(async (req, res, next) => {
 
     const createdOrders = [];
 
-    
+
     for (const farmerId in ordersByFarmer) {
         const group = ordersByFarmer[farmerId];
         const farmer = await Farmer.findById(farmerId);
-        if (!farmer) continue; 
+        if (!farmer) continue;
 
         const otp = otpGenerator.generate(4);
         const orderItems = group.products.map(p => ({
@@ -86,7 +86,7 @@ exports.createOrder = asyncHandler(async (req, res, next) => {
             status: 'pending'
         });
 
-        
+
         for (const p of group.products) {
             p.product.currentQuantity -= p.quantity;
             await p.product.save();
@@ -96,7 +96,7 @@ exports.createOrder = asyncHandler(async (req, res, next) => {
         farmer.orders.push(order._id);
         createdOrders.push(order);
 
-        
+
         await sendOTP(buyer.email, otp, {
             productName: `Order from ${farmer.name}`,
             quantity: group.products.length,
@@ -106,7 +106,7 @@ exports.createOrder = asyncHandler(async (req, res, next) => {
         notifyFarmer(farmer._id.toString(), 'newOrder', { orderId: order._id });
     }
 
-    
+
     for (const farmerId in ordersByFarmer) {
         await Farmer.findByIdAndUpdate(farmerId, { $push: { orders: { $each: createdOrders.filter(o => o.farmer.toString() === farmerId).map(o => o._id) } } });
     }
@@ -157,6 +157,86 @@ exports.updateOrderStatus = asyncHandler(async (req, res, next) => {
     notifyBuyer(order.buyer.toString(), 'orderStatusUpdated', { orderId: order._id, status: req.body.status });
 
     res.json({ success: true, message: `Order ${req.body.status}` });
+});
+
+exports.cancelOrder = asyncHandler(async (req, res, next) => {
+    const { reason } = req.body;
+    if (!reason) return next(new AppError('Cancellation reason is required', 400));
+
+    const order = await Order.findById(req.params.id);
+    if (!order) return next(new AppError('Order not found', 404));
+
+    const user = req.user;
+    const isFarmer = user.role === 'farmer';
+    const isBuyer = user.role === 'buyer';
+
+    // Auth check
+    if (isFarmer && order.farmer.toString() !== user._id.toString()) return next(new AppError('Not authorized', 403));
+    if (isBuyer && order.buyer.toString() !== user._id.toString()) return next(new AppError('Not authorized', 403));
+
+    // Status check
+    if (['delivered', 'cancelled', 'shipped'].includes(order.status)) {
+        return next(new AppError('Cannot cancel order in current status', 400));
+    }
+
+    // Time window check for Buyers (90 mins)
+    if (isBuyer) {
+        const orderTime = new Date(order.createdAt).getTime();
+        const now = Date.now();
+        const diffMins = (now - orderTime) / (1000 * 60);
+        if (diffMins > 90) {
+            return next(new AppError('Cancellation window (90 mins) has expired', 400));
+        }
+    }
+
+    order.status = 'cancelled';
+    await order.save();
+
+    // --- Message Logic ---
+    const Conversation = require('../models/Conversation');
+    const Message = require('../models/Message');
+
+    // Find or create conversation
+    let conversation = await Conversation.findOne({
+        participants: { $all: [order.farmer, order.buyer] }
+    });
+
+    if (!conversation) {
+        conversation = await Conversation.create({
+            participants: [order.farmer, order.buyer]
+        });
+    }
+
+    const cancellationText = `🚫 Order #${order._id.toString().slice(-6)} Cancelled by ${isFarmer ? 'Farmer' : 'Buyer'}.\nReason: ${reason}`;
+
+    const message = await Message.create({
+        conversationId: conversation._id,
+        sender: user._id,
+        text: cancellationText,
+        type: 'text'
+    });
+
+    conversation.lastMessage = {
+        text: cancellationText,
+        sender: user._id,
+        createdAt: new Date(),
+        isRead: false
+    };
+    await conversation.save();
+
+    // Notifications
+    const recipientId = isFarmer ? order.farmer.toString() : order.buyer.toString();
+    const { notifyUser } = require('../services/socket.service'); // Helper needed? Or use notifyFarmer/notifyBuyer directly
+    // Using existing services
+    if (isFarmer) {
+        notifyBuyer(order.buyer.toString(), 'orderStatusUpdated', { orderId: order._id, status: 'cancelled' });
+        notifyBuyer(order.buyer.toString(), 'newMessage', message);
+    } else {
+        notifyFarmer(order.farmer.toString(), 'orderStatusUpdated', { orderId: order._id, status: 'cancelled' });
+        notifyFarmer(order.farmer.toString(), 'newMessage', message);
+    }
+
+    res.json({ success: true, message: 'Order cancelled and reason sent.' });
 });
 
 exports.getMyOrders = asyncHandler(async (req, res) => {
