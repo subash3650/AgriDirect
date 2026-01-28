@@ -6,3 +6,4 @@ export const getMyOrders = () => api.get('/orders/my-orders');
 export const getOrderHistory = () => api.get('/orders/history');
 export const getOrder = (id) => api.get(`/orders/${id}`);
 export const updateOrderStatus = (orderId, status) => api.patch(`/orders/${orderId}/status`, { status });
+export const cancelOrder = (orderId, reason) => api.put(`/orders/${orderId}/cancel`, { reason });

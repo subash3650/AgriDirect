@@ -9,14 +9,34 @@ const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
 export const SocketProvider = ({ children }) => {
     const { user, isAuthenticated } = useContext(AuthContext);
     const [socket, setSocket] = useState(null);
+    const [isConnected, setIsConnected] = useState(false);
     const [notifications, setNotifications] = useState([]);
     const [orderUpdates, setOrderUpdates] = useState([]);
 
     useEffect(() => {
         if (!isAuthenticated || !user) return;
 
-        const newSocket = io(SOCKET_URL);
+        const token = localStorage.getItem('token');
+        const newSocket = io(SOCKET_URL, {
+            auth: { token }
+        });
+
+        newSocket.on('connect', () => {
+            setIsConnected(true);
+            console.log('Socket connected');
+        });
+
+        newSocket.on('disconnect', () => {
+            setIsConnected(false);
+            console.log('Socket disconnected');
+        });
+
         setSocket(newSocket);
+
+        // Store userId in localStorage for ChatModal
+        if (user.profileId) {
+            localStorage.setItem('userId', user.profileId);
+        }
 
         if (user.role === 'farmer' && user.profileId) {
             newSocket.emit('joinFarmerRoom', user.profileId);
@@ -44,7 +64,7 @@ export const SocketProvider = ({ children }) => {
     const clearNotifications = useCallback(() => setNotifications([]), []);
 
     return (
-        <SocketContext.Provider value={{ socket, notifications, orderUpdates, clearNotifications }}>
+        <SocketContext.Provider value={{ socket, isConnected, notifications, orderUpdates, clearNotifications }}>
             {children}
         </SocketContext.Provider>
     );

@@ -11,7 +11,7 @@ const Header = () => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
 
-    
+
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -42,17 +42,19 @@ const Header = () => {
                                 <>
                                     <Link to="/farmer/products" className="nav-link">My Products</Link>
                                     <Link to="/farmer/orders" className="nav-link">Orders</Link>
+                                    <Link to="/farmer/messages" className="nav-link">💬 Messages</Link>
                                 </>
                             ) : (
                                 <>
                                     <Link to="/buyer/browse" className="nav-link">Browse</Link>
+                                    <Link to="/buyer/messages" className="nav-link">💬 Messages</Link>
                                     <Link to="/buyer/cart" className="nav-link cart-link">
                                         🛒 Cart {itemCount > 0 && <span className="cart-badge">{itemCount}</span>}
                                     </Link>
                                 </>
                             )}
 
-                            {}
+                            { }
                             <div className="profile-dropdown" ref={dropdownRef}>
                                 <button
                                     className="profile-btn"

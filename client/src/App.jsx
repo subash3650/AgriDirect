@@ -14,6 +14,7 @@ import FarmerDashboard from './pages/farmer/FarmerDashboard.jsx';
 import ProductManagement from './pages/farmer/ProductManagement.jsx';
 import OrdersManagement from './pages/farmer/OrdersManagement.jsx';
 import FarmerProfilePage from './pages/farmer/FarmerProfilePage.jsx';
+import FarmerMessages from './pages/farmer/FarmerMessages.jsx';
 
 import BuyerDashboard from './pages/buyer/BuyerDashboard.jsx';
 import BrowseProducts from './pages/buyer/BrowseProducts.jsx';
@@ -22,6 +23,9 @@ import CartPage from './pages/buyer/CartPage.jsx';
 import OrderHistory from './pages/buyer/OrderHistory.jsx';
 import FeedbackForm from './pages/buyer/FeedbackForm.jsx';
 import ProfilePage from './pages/buyer/ProfilePage.jsx';
+import BuyerMessages from './pages/buyer/BuyerMessages.jsx';
+
+import FarmerPublicProfile from './pages/public/FarmerPublicProfile.jsx';
 
 const HomePage = () => (
     <div className="home-page">
@@ -86,6 +90,9 @@ function App() {
                                     <Route path="/farmer/profile" element={
                                         <ProtectedRoute requiredRole="farmer"><FarmerProfilePage /></ProtectedRoute>
                                     } />
+                                    <Route path="/farmer/messages" element={
+                                        <ProtectedRoute requiredRole="farmer"><FarmerMessages /></ProtectedRoute>
+                                    } />
 
                                     <Route path="/buyer/dashboard" element={
                                         <ProtectedRoute requiredRole="buyer"><BuyerDashboard /></ProtectedRoute>
@@ -108,6 +115,12 @@ function App() {
                                     <Route path="/buyer/profile" element={
                                         <ProtectedRoute requiredRole="buyer"><ProfilePage /></ProtectedRoute>
                                     } />
+                                    <Route path="/buyer/messages" element={
+                                        <ProtectedRoute requiredRole="buyer"><BuyerMessages /></ProtectedRoute>
+                                    } />
+
+                                    {/* Public Routes (no auth required) */}
+                                    <Route path="/farmer/:farmerId" element={<FarmerPublicProfile />} />
 
                                     <Route path="*" element={<Navigate to="/" replace />} />
                                 </Routes>

@@ -68,6 +68,9 @@ const ProductDetail = () => {
                         <div className="farmer-info">
                             <strong>Sold by:</strong> {product.owner?.name || product.ownerName}
                             <br /><span>📍 {product.city}, {product.state}</span>
+                            <Link to={`/farmer/${product.owner?._id || product.owner}`} className="btn btn-secondary btn-sm view-farmer-btn">
+                                👤 View Farmer Profile
+                            </Link>
                         </div>
 
                         <div className="product-price-large">₹{product.price}<span>/kg</span></div>
@@ -86,7 +89,7 @@ const ProductDetail = () => {
                                     value={quantity}
                                     onChange={e => {
                                         const val = parseInt(e.target.value);
-                                        
+
                                         if (!isNaN(val)) {
                                             setQuantity(Math.min(Math.max(1, val), product.currentQuantity));
                                         }
