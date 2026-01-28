@@ -11,7 +11,7 @@ const CATEGORIES = ['All', 'Vegetables', 'Fruits', 'Grains', 'Dairy', 'Organic',
 const BrowseProducts = () => {
     const { products, filteredProducts, loading, fetchProducts, updateFilters, filters } = useProducts();
     const { addToCart } = useCart();
-    const { toasts, success } = useToast();
+    const { toasts, success, error } = useToast();
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('All');
 
@@ -29,9 +29,14 @@ const BrowseProducts = () => {
         updateFilters({ category: category === 'All' ? '' : category });
     };
 
-    const handleAddToCart = (product) => {
-        addToCart(product, 1);
-        success(`${product.productName} added to cart!`);
+    const handleAddToCart = async (product) => {
+        try {
+            await addToCart(product, 1);
+            success(`${product.productName} added to cart!`);
+        } catch (err) {
+            const msg = err.response?.data?.message || 'Failed to add to cart';
+            error(msg);
+        }
     };
 
     if (loading) return <LoadingSpinner text="Loading products..." />;

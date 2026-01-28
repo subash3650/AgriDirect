@@ -1,7 +1,7 @@
 const express = require('express');
 const { protect } = require('../middleware/auth');
 const { authorize } = require('../middleware/role');
-const { getDashboard, getProfile, updateProfile, getCart, addToCart, updateCartItem, removeFromCart, clearCart } = require('../controllers/buyer.controller');
+const { getDashboard, getProfile, updateProfile, getCart, addToCart, updateCartItem, removeFromCart, clearCart, deleteAccount } = require('../controllers/buyer.controller');
 const router = express.Router();
 
 router.use(protect, authorize('buyer'));
@@ -13,5 +13,6 @@ router.post('/cart', addToCart);
 router.put('/cart/:productId', updateCartItem);
 router.delete('/cart/:productId', removeFromCart);
 router.delete('/cart', clearCart);
+router.delete('/account', deleteAccount);
 
 module.exports = router;

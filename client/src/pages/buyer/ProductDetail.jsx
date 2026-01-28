@@ -14,7 +14,7 @@ const ProductDetail = () => {
     const [quantity, setQuantity] = useState(1);
     const [loading, setLoading] = useState(true);
     const { addToCart } = useCart();
-    const { toasts, success } = useToast();
+    const { toasts, success, error } = useToast();
 
     useEffect(() => {
         const fetchData = async () => {
@@ -34,9 +34,14 @@ const ProductDetail = () => {
         fetchData();
     }, [id]);
 
-    const handleAddToCart = () => {
-        addToCart(product, quantity);
-        success(`Added ${quantity} kg to cart!`);
+    const handleAddToCart = async () => {
+        try {
+            await addToCart(product, quantity);
+            success(`Added ${quantity} kg to cart!`);
+        } catch (err) {
+            const msg = err.response?.data?.message || 'Failed to add to cart';
+            error(msg);
+        }
     };
 
     if (loading) return <LoadingSpinner />;
@@ -77,7 +82,15 @@ const ProductDetail = () => {
                         <div className="add-to-cart-section">
                             <div className="quantity-selector">
                                 <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="qty-btn">-</button>
-                                <input type="number" value={quantity} onChange={e => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                                <input type="number"
+                                    value={quantity}
+                                    onChange={e => {
+                                        const val = parseInt(e.target.value);
+                                        
+                                        if (!isNaN(val)) {
+                                            setQuantity(Math.min(Math.max(1, val), product.currentQuantity));
+                                        }
+                                    }}
                                     min="1" max={product.currentQuantity} className="qty-input" />
                                 <button onClick={() => setQuantity(q => Math.min(product.currentQuantity, q + 1))} className="qty-btn">+</button>
                             </div>

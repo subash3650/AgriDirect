@@ -5,11 +5,9 @@ const initializeSocket = (server) => {
     io = new Server(server, { cors: { origin: process.env.FRONTEND_URL || 'http://localhost:5173', methods: ['GET', 'POST'] } });
 
     io.on('connection', (socket) => {
-        console.log('Client connected:', socket.id);
-
         socket.on('joinFarmerRoom', (farmerId) => socket.join(`farmer_${farmerId}`));
         socket.on('joinBuyerRoom', (buyerId) => socket.join(`buyer_${buyerId}`));
-        socket.on('disconnect', () => console.log('Client disconnected:', socket.id));
+        socket.on('disconnect', () => { });
     });
 };
 

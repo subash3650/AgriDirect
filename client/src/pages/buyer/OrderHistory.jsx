@@ -4,12 +4,18 @@ import { getMyOrders, verifyOTP } from '../../services/order.service';
 import { useSocket } from '../../hooks/useSocket';
 import LoadingSpinner from '../../components/shared/LoadingSpinner.jsx';
 import Toast, { useToast } from '../../components/shared/Toast.jsx';
+import api from '../../services/api'; 
 import './Buyer.css';
 
 const OrderHistory = () => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [otpModal, setOtpModal] = useState({ show: false, orderId: null, otp: '' });
+
+    
+    const [reviewModal, setReviewModal] = useState({ show: false, orderId: null, productId: null, productName: '' });
+    const [reviewData, setReviewData] = useState({ rating: 5, review: '' });
+
     const { notifications } = useSocket();
     const { toasts, success, error } = useToast();
 
@@ -18,6 +24,7 @@ const OrderHistory = () => {
     }, []);
 
     useEffect(() => {
+        
         if (notifications.some(n => n.type === 'statusUpdate')) {
             fetchOrders();
         }
@@ -45,6 +52,37 @@ const OrderHistory = () => {
         }
     };
 
+    
+    const openReviewModal = (orderId, item) => {
+        setReviewModal({
+            show: true,
+            orderId,
+            productId: item.product?._id || item.product,
+            productName: item.name
+        });
+        setReviewData({ rating: 5, review: '' });
+    };
+
+    
+    const submitReview = async (e) => {
+        e.preventDefault();
+        try {
+            
+            await api.post('/feedback', {
+                orderId: reviewModal.orderId,
+                productId: reviewModal.productId,
+                rating: parseInt(reviewData.rating),
+                review: reviewData.review
+            });
+
+            success('Review submitted successfully!');
+            setReviewModal({ show: false, orderId: null, productId: null, productName: '' });
+            fetchOrders(); 
+        } catch (err) {
+            error(err.response?.data?.message || 'Failed to submit review');
+        }
+    };
+
     const getStatusColor = (status) => {
         switch (status) {
             case 'delivered': return 'success';
@@ -59,6 +97,43 @@ const OrderHistory = () => {
     return (
         <div className="orders-history-page">
             <Toast toasts={toasts} />
+
+            {}
+            {reviewModal.show && (
+                <div className="modal-overlay" onClick={() => setReviewModal({ show: false })}>
+                    <div className="modal" onClick={e => e.stopPropagation()}>
+                        <h2>Review {reviewModal.productName}</h2>
+                        <form onSubmit={submitReview}>
+                            <div className="form-group">
+                                <label>Rating</label>
+                                <select
+                                    value={reviewData.rating}
+                                    onChange={e => setReviewData({ ...reviewData, rating: e.target.value })}
+                                    className="form-input"
+                                >
+                                    {[5, 4, 3, 2, 1].map(r => <option key={r} value={r}>{r} Stars</option>)}
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>Your Review</label>
+                                <textarea
+                                    value={reviewData.review}
+                                    onChange={e => setReviewData({ ...reviewData, review: e.target.value })}
+                                    className="form-input"
+                                    required
+                                    rows="3"
+                                    placeholder="Share your experience..."
+                                ></textarea>
+                            </div>
+                            <div className="modal-actions">
+                                <button type="button" onClick={() => setReviewModal({ show: false })} className="btn btn-secondary">Cancel</button>
+                                <button type="submit" className="btn btn-primary">Submit Review</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             <div className="container">
                 <div className="page-header">
                     <h1 className="page-title">My Orders</h1>
@@ -81,15 +156,41 @@ const OrderHistory = () => {
                                     <span className={`badge badge-${getStatusColor(order.status)}`}>{order.status}</span>
                                 </div>
                                 <div className="order-card-body">
-                                    <img src={order.productDetails?.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=80'}
-                                        alt="" className="order-product-image" />
-                                    <div className="order-product-info">
-                                        <h4>{order.productDetails?.name}</h4>
-                                        <p>Quantity: {order.productDetails?.quantity} kg</p>
-                                        <p>From: {order.farmerDetails?.name}</p>
+                                    <div className="order-items-container">
+                                        {order.items?.map((item, idx) => (
+                                            <div key={idx} className="order-item-row">
+                                                <div className="item-details-left">
+                                                    <img src={item.image} alt={item.name} className="item-mini-thumb" />
+                                                    <div className="item-text-info">
+                                                        <span className="item-name">{item.name}</span>
+                                                        <span className="item-meta">{item.quantity} kg x ₹{item.price}</span>
+                                                    </div>
+                                                </div>
+
+                                                {}
+                                                {order.status === 'delivered' && (
+                                                    <div className="item-action">
+                                                        {!item.reviewed ? (
+                                                            <button
+                                                                className="btn btn-sm btn-outline-primary"
+                                                                onClick={() => openReviewModal(order._id, item)}
+                                                            >
+                                                                Write Review
+                                                            </button>
+                                                        ) : (
+                                                            <span className="badge badge-success">✓ Reviewed</span>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
                                     </div>
+
+                                    <div className="order-summary-divider"></div>
+
                                     <div className="order-price-info">
-                                        <div className="order-total">₹{order.totalPrice}</div>
+                                        <div className="order-total">Total: ₹{order.totalPrice}</div>
+                                        <div className="order-farmer">Farmer: {order.farmerDetails?.name}</div>
                                         <div className="order-date">{new Date(order.createdAt).toLocaleDateString()}</div>
                                     </div>
                                 </div>
@@ -101,15 +202,13 @@ const OrderHistory = () => {
                                                 className="btn btn-primary">Verify OTP</button>
                                         </>
                                     )}
-                                    {order.status === 'delivered' && !order.feedbackDone && (
-                                        <Link to={`/buyer/feedback/${order._id}`} className="btn btn-secondary">Leave Review</Link>
-                                    )}
                                 </div>
                             </div>
                         ))}
                     </div>
                 )}
 
+                {}
                 {otpModal.show && (
                     <div className="modal-overlay" onClick={() => setOtpModal({ show: false, orderId: null, otp: '' })}>
                         <div className="modal" onClick={e => e.stopPropagation()}>

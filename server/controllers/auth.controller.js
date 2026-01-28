@@ -1,47 +1,91 @@
-const User = require('../models/User');
 const Farmer = require('../models/Farmer');
 const Buyer = require('../models/Buyer');
 const { generateToken } = require('../services/auth.service');
 const { AppError, asyncHandler } = require('../middleware');
 
 exports.register = asyncHandler(async (req, res, next) => {
-    const { name, email, password, phno, role, state, city, pin } = req.body;
+    const { name, email, password, phno, role, state, city, pin, location } = req.body;
 
-    if (await User.findOne({ email })) return next(new AppError('Email already exists', 400));
+    
+    
+    let existingUser;
+    if (role === 'farmer') {
+        existingUser = await Farmer.findOne({ email });
+    } else {
+        existingUser = await Buyer.findOne({ email });
+    }
 
-    const user = await User.create({ name, email, password, phno, role, state, city, pin });
+    if (existingUser) return next(new AppError(`Email already registered as ${role}`, 400));
+
+    const locationData = location || { coordinates: [], address: '' };
+    let user;
 
     if (role === 'farmer') {
-        await Farmer.create({ userId: user._id, name, email, phno, state, city, pin });
+        user = await Farmer.create({ name, email, password, phno, state, city, pin, location: locationData });
     } else {
-        await Buyer.create({ userId: user._id, name, email, phno, state, city, pin });
+        user = await Buyer.create({ name, email, password, phno, state, city, pin, location: locationData });
     }
 
     const token = generateToken(user._id);
-    res.status(201).json({ success: true, token, user: { id: user._id, name, email, role, phno, state, city, pin } });
+    res.status(201).json({ success: true, token, user: { id: user._id, name, email, role, phno, state, city, pin, location: locationData } });
 });
 
 exports.login = asyncHandler(async (req, res, next) => {
     const { email, password } = req.body;
     if (!email || !password) return next(new AppError('Provide email and password', 400));
 
-    const user = await User.findOne({ email }).select('+password');
-    if (!user || !(await user.comparePassword(password))) return next(new AppError('Invalid credentials', 401));
+    
+    let user = await Farmer.findOne({ email }).select('+password');
+    let role = 'farmer';
 
-    let profileId = null;
-    if (user.role === 'farmer') profileId = (await Farmer.findOne({ userId: user._id }))?._id;
-    else profileId = (await Buyer.findOne({ userId: user._id }))?._id;
+    
+    if (!user) {
+        user = await Buyer.findOne({ email }).select('+password');
+        role = 'buyer';
+    }
+
+    
+    if (!user || !user.password || !(await user.comparePassword(password))) {
+        return next(new AppError('Invalid credentials', 401));
+    }
 
     const token = generateToken(user._id);
-    res.json({ success: true, token, user: { id: user._id, profileId, name: user.name, email: user.email, role: user.role, phno: user.phno, state: user.state, city: user.city, pin: user.pin } });
+    
+    res.json({
+        success: true,
+        token,
+        user: {
+            id: user._id,
+            profileId: user._id, 
+            name: user.name,
+            email: user.email,
+            role: role,
+            phno: user.phno,
+            state: user.state,
+            city: user.city,
+            pin: user.pin
+        }
+    });
 });
 
 exports.getMe = asyncHandler(async (req, res) => {
-    let profileId = null;
-    if (req.user.role === 'farmer') profileId = (await Farmer.findOne({ userId: req.user._id }))?._id;
-    else profileId = (await Buyer.findOne({ userId: req.user._id }))?._id;
+    
+    const user = req.user;
 
-    res.json({ success: true, user: { id: req.user._id, profileId, name: req.user.name, email: req.user.email, role: req.user.role, phno: req.user.phno, state: req.user.state, city: req.user.city, pin: req.user.pin } });
+    res.json({
+        success: true,
+        user: {
+            id: user._id,
+            profileId: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role, 
+            phno: user.phno,
+            state: user.state,
+            city: user.city,
+            pin: user.pin
+        }
+    });
 });
 
 exports.logout = asyncHandler(async (req, res) => res.json({ success: true, message: 'Logged out' }));

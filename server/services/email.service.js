@@ -1,29 +1,23 @@
 const nodemailer = require('nodemailer');
 
-// Create transporter with detailed logging
+
 const createTransporter = () => {
     const email = process.env.SMTP_EMAIL;
     const password = process.env.SMTP_APP_PASSWORD;
 
-    console.log('\n[EMAIL SERVICE] Creating transporter...');
-    console.log('[EMAIL SERVICE] SMTP_EMAIL:', email || 'NOT SET');
-    console.log('[EMAIL SERVICE] SMTP_APP_PASSWORD:', password ? `${password.substring(0, 4)}****` : 'NOT SET');
-
     if (!email || !password) {
-        console.error('[EMAIL SERVICE] ❌ Missing email credentials in .env');
+        console.error('[EMAIL SERVICE] Missing email credentials in .env');
         return null;
     }
 
     return nodemailer.createTransport({
         host: 'smtp.gmail.com',
         port: 587,
-        secure: false, // Use TLS
+        secure: false,
         auth: {
             user: email,
             pass: password
-        },
-        debug: true, // Enable debug output
-        logger: true  // Log to console
+        }
     });
 };
 
@@ -37,17 +31,10 @@ const getTransporter = () => {
 };
 
 const sendOTP = async (buyerEmail, otp, orderDetails) => {
-    console.log('\n' + '='.repeat(60));
-    console.log('[EMAIL SERVICE] SENDING OTP EMAIL');
-    console.log('='.repeat(60));
-    console.log('[EMAIL SERVICE] To:', buyerEmail);
-    console.log('[EMAIL SERVICE] OTP:', otp);
-    console.log('[EMAIL SERVICE] Order Details:', JSON.stringify(orderDetails, null, 2));
-
     const transport = getTransporter();
 
     if (!transport) {
-        console.error('[EMAIL SERVICE] ❌ Transporter not available - check .env credentials');
+        console.error('[EMAIL SERVICE] Transporter not available');
         return false;
     }
 
@@ -78,32 +65,16 @@ const sendOTP = async (buyerEmail, otp, orderDetails) => {
         `
     };
 
-    console.log('[EMAIL SERVICE] Mail options prepared');
-    console.log('[EMAIL SERVICE] From:', mailOptions.from);
-    console.log('[EMAIL SERVICE] To:', mailOptions.to);
-    console.log('[EMAIL SERVICE] Subject:', mailOptions.subject);
-
     try {
-        console.log('[EMAIL SERVICE] Attempting to send email...');
-        const info = await transport.sendMail(mailOptions);
-        console.log('[EMAIL SERVICE] ✅ Email sent successfully!');
-        console.log('[EMAIL SERVICE] Message ID:', info.messageId);
-        console.log('[EMAIL SERVICE] Response:', info.response);
-        console.log('='.repeat(60) + '\n');
+        await transport.sendMail(mailOptions);
         return true;
     } catch (error) {
-        console.error('[EMAIL SERVICE] ❌ FAILED TO SEND EMAIL');
-        console.error('[EMAIL SERVICE] Error Code:', error.code);
-        console.error('[EMAIL SERVICE] Error Message:', error.message);
-        console.error('[EMAIL SERVICE] Full Error:', error);
-        console.log('='.repeat(60) + '\n');
+        console.error('[EMAIL SERVICE] Failed to send email:', error.message);
         return false;
     }
 };
 
 const sendOrderConfirmation = async (email, order) => {
-    console.log('[EMAIL SERVICE] Sending order confirmation to:', email);
-
     const transport = getTransporter();
     if (!transport) return false;
 
@@ -116,17 +87,14 @@ const sendOrderConfirmation = async (email, order) => {
 
     try {
         await transport.sendMail(mailOptions);
-        console.log('[EMAIL SERVICE] ✅ Order confirmation sent');
         return true;
     } catch (error) {
-        console.error('[EMAIL SERVICE] ❌ Order confirmation failed:', error.message);
+        console.error('[EMAIL SERVICE] Order confirmation failed:', error.message);
         return false;
     }
 };
 
 const sendStatusUpdate = async (email, order, status) => {
-    console.log('[EMAIL SERVICE] Sending status update to:', email, 'Status:', status);
-
     const transport = getTransporter();
     if (!transport) return false;
 
@@ -139,36 +107,27 @@ const sendStatusUpdate = async (email, order, status) => {
 
     try {
         await transport.sendMail(mailOptions);
-        console.log('[EMAIL SERVICE] ✅ Status update sent');
         return true;
     } catch (error) {
-        console.error('[EMAIL SERVICE] ❌ Status update failed:', error.message);
+        console.error('[EMAIL SERVICE] Status update failed:', error.message);
         return false;
     }
 };
 
-// Verify email configuration on startup
+
 const verifyEmailConfig = async () => {
-    console.log('\n[EMAIL SERVICE] Verifying email configuration...');
     const transport = getTransporter();
 
     if (!transport) {
-        console.error('[EMAIL SERVICE] ❌ Cannot verify - transporter not created');
+        console.error('[EMAIL SERVICE] Cannot verify - transporter not created');
         return false;
     }
 
     try {
         await transport.verify();
-        console.log('[EMAIL SERVICE] ✅ Email configuration verified successfully!');
         return true;
     } catch (error) {
-        console.error('[EMAIL SERVICE] ❌ Email configuration FAILED');
-        console.error('[EMAIL SERVICE] Error:', error.message);
-        console.error('[EMAIL SERVICE] Possible issues:');
-        console.error('   1. Wrong email/password in .env');
-        console.error('   2. App Password not created correctly');
-        console.error('   3. 2-Step Verification not enabled on Gmail');
-        console.error('   4. Less secure app access blocked');
+        console.error('[EMAIL SERVICE] Email configuration failed:', error.message);
         return false;
     }
 };

@@ -88,3 +88,25 @@
     color: var(--color-success);
     border: 1px solid rgba(40, 167, 69, 0.2);
 }
+
+.form-section.location-section {
+    margin-top: 1.5rem;
+    padding: 1.25rem;
+    background: var(--color-bg, #f9fafb);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border, #e5e7eb);
+}
+
+.section-label {
+    display: block;
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--color-text);
+    margin-bottom: 0.25rem;
+}
+
+.section-hint {
+    font-size: 0.8rem;
+    color: var(--color-text-light);
+    margin-bottom: 1rem;
+}

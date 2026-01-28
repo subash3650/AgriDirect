@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import LocationPicker from '../../components/shared/LocationPicker';
 import './Auth.css';
 
 const SignupPage = () => {
     const { signup, error } = useAuth();
     const [formData, setFormData] = useState({
         name: '', email: '', password: '', confirmPassword: '',
-        phno: '', role: 'buyer', state: '', city: '', pin: ''
+        phno: '', role: 'buyer', state: '', city: '', pin: '',
+        location: { coordinates: [], address: '' }
     });
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
@@ -44,6 +46,10 @@ const SignupPage = () => {
         const { confirmPassword, ...signupData } = formData;
         signupData.phno = Number(signupData.phno);
         signupData.pin = Number(signupData.pin);
+        
+        if (!signupData.location?.coordinates?.length) {
+            delete signupData.location;
+        }
         await signup(signupData);
         setLoading(false);
     };
@@ -138,6 +144,16 @@ const SignupPage = () => {
                                 placeholder="560001" disabled={loading} />
                             {errors.pin && <span className="error-text">{errors.pin}</span>}
                         </div>
+                    </div>
+
+                    <div className="form-section location-section">
+                        <label className="section-label">📍 Your Location (Optional)</label>
+                        <p className="section-hint">Select your location for better delivery experience</p>
+                        <LocationPicker
+                            value={formData.location}
+                            onChange={(location) => setFormData(prev => ({ ...prev, location }))}
+                            disabled={loading}
+                        />
                     </div>
 
                     <button type="submit" className="btn btn-primary btn-full btn-lg" disabled={loading}>

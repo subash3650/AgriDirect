@@ -7,24 +7,22 @@ import Header from './components/shared/Header.jsx';
 import Footer from './components/shared/Footer.jsx';
 import ProtectedRoute from './components/shared/ProtectedRoute.jsx';
 
-// Auth Pages
 import LoginPage from './pages/auth/LoginPage.jsx';
 import SignupPage from './pages/auth/SignupPage.jsx';
 
-// Farmer Pages
 import FarmerDashboard from './pages/farmer/FarmerDashboard.jsx';
 import ProductManagement from './pages/farmer/ProductManagement.jsx';
 import OrdersManagement from './pages/farmer/OrdersManagement.jsx';
+import FarmerProfilePage from './pages/farmer/FarmerProfilePage.jsx';
 
-// Buyer Pages
 import BuyerDashboard from './pages/buyer/BuyerDashboard.jsx';
 import BrowseProducts from './pages/buyer/BrowseProducts.jsx';
 import ProductDetail from './pages/buyer/ProductDetail.jsx';
 import CartPage from './pages/buyer/CartPage.jsx';
 import OrderHistory from './pages/buyer/OrderHistory.jsx';
 import FeedbackForm from './pages/buyer/FeedbackForm.jsx';
+import ProfilePage from './pages/buyer/ProfilePage.jsx';
 
-// Home/Landing Page
 const HomePage = () => (
     <div className="home-page">
         <div className="hero">
@@ -71,13 +69,11 @@ function App() {
                             <Header />
                             <main className="main-content">
                                 <Routes>
-                                    {/* Public Routes */}
                                     <Route path="/" element={<HomePage />} />
                                     <Route path="/auth/login" element={<LoginPage />} />
                                     <Route path="/auth/signup" element={<SignupPage />} />
                                     <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
-                                    {/* Farmer Routes */}
                                     <Route path="/farmer/dashboard" element={
                                         <ProtectedRoute requiredRole="farmer"><FarmerDashboard /></ProtectedRoute>
                                     } />
@@ -87,8 +83,10 @@ function App() {
                                     <Route path="/farmer/orders" element={
                                         <ProtectedRoute requiredRole="farmer"><OrdersManagement /></ProtectedRoute>
                                     } />
+                                    <Route path="/farmer/profile" element={
+                                        <ProtectedRoute requiredRole="farmer"><FarmerProfilePage /></ProtectedRoute>
+                                    } />
 
-                                    {/* Buyer Routes */}
                                     <Route path="/buyer/dashboard" element={
                                         <ProtectedRoute requiredRole="buyer"><BuyerDashboard /></ProtectedRoute>
                                     } />
@@ -107,8 +105,10 @@ function App() {
                                     <Route path="/buyer/feedback/:orderId" element={
                                         <ProtectedRoute requiredRole="buyer"><FeedbackForm /></ProtectedRoute>
                                     } />
+                                    <Route path="/buyer/profile" element={
+                                        <ProtectedRoute requiredRole="buyer"><ProfilePage /></ProtectedRoute>
+                                    } />
 
-                                    {/* Catch all */}
                                     <Route path="*" element={<Navigate to="/" replace />} />
                                 </Routes>
                             </main>

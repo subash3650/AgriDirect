@@ -88,16 +88,16 @@ const OrdersManagement = () => {
                                     <tr key={order._id}>
                                         <td>
                                             <div className="order-product-cell">
-                                                <img src={order.productDetails?.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=50'}
+                                                <img src={order.items?.[0]?.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=50'}
                                                     alt="" className="order-product-img" />
-                                                <span>{order.productDetails?.name}</span>
+                                                <span>{order.items?.map(i => i.name).join(', ')}</span>
                                             </div>
                                         </td>
                                         <td>
                                             <div>{order.buyerDetails?.name}</div>
                                             <small>{order.buyerDetails?.phno}</small>
                                         </td>
-                                        <td>{order.productDetails?.quantity} kg</td>
+                                        <td>{order.items?.reduce((acc, i) => acc + i.quantity, 0)} kg</td>
                                         <td className="price-cell">₹{order.totalPrice}</td>
                                         <td>
                                             <span className={`badge badge-${order.status === 'delivered' ? 'success' :
@@ -113,8 +113,20 @@ const OrdersManagement = () => {
                                                     className="btn btn-primary btn-sm">Ship</button>
                                             )}
                                             {order.status === 'shipped' && (
-                                                <button onClick={() => handleStatusUpdate(order._id, 'delivered')}
-                                                    className="btn btn-primary btn-sm">Deliver</button>
+                                                <div className="action-column">
+                                                    <button onClick={() => handleStatusUpdate(order._id, 'delivered')}
+                                                        className="btn btn-primary btn-sm">Deliver</button>
+                                                    {order.buyerDetails?.coordinates?.length === 2 && (
+                                                        <a
+                                                            href={`https://www.google.com/maps/dir/?api=1&destination=${order.buyerDetails.coordinates[1]},${order.buyerDetails.coordinates[0]}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="route-link"
+                                                        >
+                                                            Show Route 📍
+                                                        </a>
+                                                    )}
+                                                </div>
                                             )}
                                             {order.status === 'pending' && (
                                                 <span className="pending-text">Awaiting OTP</span>

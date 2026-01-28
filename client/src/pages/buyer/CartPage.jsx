@@ -8,7 +8,6 @@ import './Buyer.css';
 const CartPage = () => {
     const { cart, removeFromCart, updateQuantity, clearCart, subtotal, tax, total, itemCount } = useCart();
     const [loading, setLoading] = useState(false);
-    const [otpModal, setOtpModal] = useState({ show: false, orderId: null, otp: '' });
     const { toasts, success, error } = useToast();
     const navigate = useNavigate();
 
@@ -16,13 +15,13 @@ const CartPage = () => {
         if (cart.length === 0) return;
         setLoading(true);
         try {
-            // Create orders for each cart item
-            for (const item of cart) {
-                await createOrder({
-                    productId: item.productId,
+            // Create orders for all cart items (Backend now handles grouping by farmer)
+            await createOrder({
+                items: cart.map(item => ({
+                    productId: item.product._id || item.product, // Handle populated object or direct ID
                     quantity: item.quantity
-                });
-            }
+                }))
+            });
             success('Orders placed! Check your email for OTP to verify.');
             clearCart();
             navigate('/buyer/orders');
@@ -60,7 +59,7 @@ const CartPage = () => {
                 <div className="cart-layout">
                     <div className="cart-items">
                         {cart.map(item => (
-                            <div key={item.productId} className="cart-item card">
+                            <div key={item.product._id} className="cart-item card">
                                 <img src={item.product?.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=100'}
                                     alt={item.product?.productName} className="cart-item-img" />
                                 <div className="cart-item-info">
@@ -70,12 +69,12 @@ const CartPage = () => {
                                 </div>
                                 <div className="cart-item-controls">
                                     <div className="quantity-selector">
-                                        <button onClick={() => updateQuantity(item.productId, item.quantity - 1)} className="qty-btn">-</button>
+                                        <button onClick={() => updateQuantity(item.product._id, item.quantity - 1)} className="qty-btn">-</button>
                                         <span className="qty-value">{item.quantity}</span>
-                                        <button onClick={() => updateQuantity(item.productId, item.quantity + 1)} className="qty-btn">+</button>
+                                        <button onClick={() => updateQuantity(item.product._id, item.quantity + 1)} className="qty-btn">+</button>
                                     </div>
                                     <div className="cart-item-total">₹{item.price * item.quantity}</div>
-                                    <button onClick={() => removeFromCart(item.productId)} className="remove-btn">🗑️</button>
+                                    <button onClick={() => removeFromCart(item.product._id)} className="remove-btn">🗑️</button>
                                 </div>
                             </div>
                         ))}

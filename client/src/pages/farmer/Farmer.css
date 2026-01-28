@@ -157,7 +157,7 @@
     padding: 1rem;
 }
 
-/* Product cards */
+
 .products-grid {
     margin-top: 1rem;
 }
@@ -213,7 +213,7 @@
     flex: 1;
 }
 
-/* Modal */
+
 .modal-overlay {
     position: fixed;
     inset: 0;
@@ -254,7 +254,7 @@
     flex: 1;
 }
 
-/* Orders table */
+
 .orders-table {
     background: var(--color-surface);
     border-radius: var(--radius-lg);

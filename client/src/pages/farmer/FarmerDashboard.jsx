@@ -82,7 +82,7 @@ const FarmerDashboard = () => {
                         <div className="orders-list">
                             {recentOrders?.length > 0 ? recentOrders.map(order => (
                                 <div key={order._id} className="order-item">
-                                    <div className="order-product">{order.productDetails?.name}</div>
+                                    <div className="order-product">{order.items?.map(i => i.name).join(', ')}</div>
                                     <div className="order-buyer">{order.buyerDetails?.name}</div>
                                     <span className={`badge badge-${order.status === 'delivered' ? 'success' : order.status === 'pending' ? 'warning' : 'primary'}`}>
                                         {order.status}

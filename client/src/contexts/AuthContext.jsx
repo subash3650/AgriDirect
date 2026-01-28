@@ -28,7 +28,7 @@ export const AuthProvider = ({ children }) => {
             setToken(token);
             setUser(userData);
             setUserState(userData);
-            navigate(userData.role === 'farmer' ? '/farmer/dashboard' : '/buyer/dashboard');
+            navigate(userData.role === 'farmer' ? '/farmer/dashboard' : '/buyer/browse');
             return { success: true };
         } catch (err) {
             const message = err.response?.data?.message || 'Login failed';
@@ -45,7 +45,7 @@ export const AuthProvider = ({ children }) => {
             setToken(token);
             setUser(userData);
             setUserState(userData);
-            navigate(userData.role === 'farmer' ? '/farmer/dashboard' : '/buyer/dashboard');
+            navigate(userData.role === 'farmer' ? '/farmer/dashboard' : '/buyer/browse');
             return { success: true };
         } catch (err) {
             const message = err.response?.data?.message || 'Signup failed';

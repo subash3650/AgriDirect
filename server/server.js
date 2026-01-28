@@ -9,12 +9,12 @@ const PORT = process.env.PORT || 5000;
 
 const server = http.createServer(app);
 
-// Initialize Socket.IO
+
 initializeSocket(server);
 
-// Connect to database and start server
+
 connectDB().then(async () => {
-    // Verify email configuration
+    
     await verifyEmailConfig();
 
     server.listen(PORT, () => {
@@ -23,7 +23,7 @@ connectDB().then(async () => {
     });
 });
 
-// Handle unhandled rejections
+
 process.on('unhandledRejection', (err) => {
     console.error('Unhandled Rejection:', err);
     server.close(() => process.exit(1));
