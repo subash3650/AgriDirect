@@ -78,7 +78,7 @@ const LoginPage = () => {
                     </div>
 
                     <button type="submit" className="btn btn-primary btn-full btn-lg" disabled={loading}>
-                        {loading ? <span className="spinner spinner-small"></span> : 'Sign In'}
+                        {loading && <span className="spinner spinner-small"></span>} Sign In
                     </button>
                 </form>
 
