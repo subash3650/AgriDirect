@@ -121,7 +121,10 @@ const ProductDetail = () => {
                             ))}
                         </div>
                     ) : (
-                        <p className="empty-text">No reviews yet. Be the first to review!</p>
+                        <div className="empty-reviews">
+                            <p className="empty-text">No reviews yet for this product.</p>
+                            <p className="empty-hint">💡 Purchase this product to leave a review!</p>
+                        </div>
                     )}
                 </section>
             </div>

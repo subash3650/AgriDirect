@@ -36,7 +36,15 @@ const orderSchema = new mongoose.Schema({
     shipping: { type: Boolean, default: false },
     delivered: { type: Boolean, default: false },
     deliveredAt: { type: Date },
-    feedbackDone: { type: Boolean, default: false }
+    feedbackDone: { type: Boolean, default: false },
+    
+    // Delivery sequence optimization fields
+    deliverySequence: {
+        sequence: { type: Number, default: null }, // 1, 2, 3...
+        distanceFromPrevious: { type: Number, default: null }, // in km
+        estimatedTimeFromPrevious: { type: Number, default: null } // in minutes
+    },
+    optimizedAt: { type: Date, default: null }
 }, { timestamps: true });
 
 orderSchema.index({ buyer: 1, status: 1 });

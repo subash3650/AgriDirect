@@ -410,6 +410,40 @@
     color: var(--color-text);
 }
 
+/* Page Header with Optimize Button */
+.page-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 1rem;
+}
+
+.btn-optimize {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.25rem;
+    border-radius: var(--radius-lg);
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+    box-shadow: var(--shadow-md);
+}
+
+.btn-optimize:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-optimize:active {
+    transform: translateY(0);
+}
+
 /* Media Queries */
 @media (max-width: 1024px) {
     .stats-grid {
@@ -727,4 +761,19 @@
     }
 
     /* Or toggle logic if implemented */
+}
+
+/* Route Sequence Badge */
+.sequence-badge {
+    background: var(--color-primary);
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    box-shadow: var(--shadow-sm);
 }

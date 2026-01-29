@@ -86,11 +86,7 @@ exports.createOrder = asyncHandler(async (req, res, next) => {
             status: 'pending'
         });
 
-
-        for (const p of group.products) {
-            p.product.currentQuantity -= p.quantity;
-            await p.product.save();
-        }
+        // Note: Stock is reduced only after OTP verification, not at order creation
 
         buyer.orders.push(order._id);
         farmer.orders.push(order._id);
@@ -130,6 +126,24 @@ exports.verifyOTP = asyncHandler(async (req, res, next) => {
 
     if (order.OTP !== req.body.otp) {
         return next(new AppError('Invalid OTP', 400));
+    }
+
+    // Check if already verified
+    if (order.status !== 'pending') {
+        return next(new AppError('Order already verified', 400));
+    }
+
+    // Reduce stock quantities after successful OTP verification
+    for (const item of order.items) {
+        const product = await Product.findById(item.product);
+        if (product) {
+            // Check if sufficient stock is still available
+            if (product.currentQuantity < item.quantity) {
+                return next(new AppError(`Insufficient stock for ${item.name}. Available: ${product.currentQuantity}`, 400));
+            }
+            product.currentQuantity -= item.quantity;
+            await product.save();
+        }
     }
 
     order.status = 'processing';
@@ -196,14 +210,21 @@ exports.cancelOrder = asyncHandler(async (req, res, next) => {
     const Conversation = require('../models/Conversation');
     const Message = require('../models/Message');
 
-    // Find or create conversation
+    // Find or create conversation between farmer and buyer
     let conversation = await Conversation.findOne({
-        participants: { $all: [order.farmer, order.buyer] }
+        'participants.userId': { $all: [order.farmer, order.buyer] }
     });
 
     if (!conversation) {
+        // Get farmer and buyer names for the conversation
+        const farmer = await Farmer.findById(order.farmer).select('name');
+        const buyer = await Buyer.findById(order.buyer).select('name');
+
         conversation = await Conversation.create({
-            participants: [order.farmer, order.buyer]
+            participants: [
+                { userId: order.farmer, userType: 'farmer', name: farmer?.name || 'Farmer' },
+                { userId: order.buyer, userType: 'buyer', name: buyer?.name || 'Buyer' }
+            ]
         });
     }
 
@@ -211,23 +232,19 @@ exports.cancelOrder = asyncHandler(async (req, res, next) => {
 
     const message = await Message.create({
         conversationId: conversation._id,
-        sender: user._id,
-        text: cancellationText,
-        type: 'text'
+        senderId: user._id,
+        senderType: user.role,
+        text: cancellationText
     });
 
     conversation.lastMessage = {
         text: cancellationText,
-        sender: user._id,
-        createdAt: new Date(),
-        isRead: false
+        senderId: user._id,
+        timestamp: new Date()
     };
     await conversation.save();
 
-    // Notifications
-    const recipientId = isFarmer ? order.farmer.toString() : order.buyer.toString();
-    const { notifyUser } = require('../services/socket.service'); // Helper needed? Or use notifyFarmer/notifyBuyer directly
-    // Using existing services
+    // Send notifications to the other party
     if (isFarmer) {
         notifyBuyer(order.buyer.toString(), 'orderStatusUpdated', { orderId: order._id, status: 'cancelled' });
         notifyBuyer(order.buyer.toString(), 'newMessage', message);
