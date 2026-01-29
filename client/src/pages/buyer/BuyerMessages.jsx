@@ -80,9 +80,15 @@ const BuyerMessages = () => {
         if (!socket) return;
 
         const handleNewMessage = (data) => {
-            if (activeConversation && data.message.conversationId === activeConversation._id) {
+            // Check if message is from self to avoid duplication
+            // (Sender already adds it optimistically)
+            const senderId = data.message.senderId?._id?.toString() || data.message.senderId?.toString() || '';
+            const isFromMe = senderId === currentUserId;
+
+            if (!isFromMe && activeConversation && data.message.conversationId === activeConversation._id) {
                 setMessages(prev => [...prev, data.message]);
             }
+            // Update conversation list
             setConversations(prev => prev.map(conv => {
                 if (conv._id === data.conversation._id) {
                     return { ...conv, lastMessage: data.conversation.lastMessage };

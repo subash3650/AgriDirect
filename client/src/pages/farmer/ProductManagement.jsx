@@ -169,9 +169,42 @@ const ProductManagement = () => {
                                             onChange={handleChange} className="form-input" required min="1" />
                                     </div>
                                     <div className="form-group">
-                                        <label>Image URL</label>
-                                        <input type="text" name="image" value={formData.image}
-                                            onChange={handleChange} className="form-input" placeholder="https://..." />
+                                        <label>Product Image</label>
+                                        <div className="image-input-container">
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={(e) => {
+                                                    const file = e.target.files[0];
+                                                    if (file) {
+                                                        if (file.size > 2 * 1024 * 1024) {
+                                                            error('Image size must be less than 2MB');
+                                                            e.target.value = ''; // Reset input
+                                                            return;
+                                                        }
+                                                        const reader = new FileReader();
+                                                        reader.onloadend = () => {
+                                                            setFormData(prev => ({ ...prev, image: reader.result }));
+                                                        };
+                                                        reader.readAsDataURL(file);
+                                                    }
+                                                }}
+                                                className="form-input"
+                                            />
+                                            <p className="help-text">Max size: 2MB. Supported: JPG, PNG, WEBP</p>
+                                            <div className="url-toggle">
+                                                <small>Or <a href="#" onClick={(e) => {
+                                                    e.preventDefault();
+                                                    const url = prompt("Enter Image URL:");
+                                                    if (url) setFormData(prev => ({ ...prev, image: url }));
+                                                }}>enter URL</a></small>
+                                            </div>
+                                            {formData.image && (
+                                                <div className="image-preview">
+                                                    <img src={formData.image} alt="Preview" style={{ height: '60px', marginTop: '0.5rem', borderRadius: '4px', objectFit: 'contain' }} />
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="modal-actions">

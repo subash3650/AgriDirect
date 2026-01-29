@@ -1,5 +1,6 @@
 import { createContext, useState, useCallback, useEffect } from 'react';
 import * as productService from '../services/product.service';
+import { useSocket } from '../hooks/useSocket';
 
 export const ProductContext = createContext();
 
@@ -8,6 +9,7 @@ export const ProductProvider = ({ children }) => {
     const [filteredProducts, setFilteredProducts] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const { socket } = useSocket();
     const [filters, setFilters] = useState({
         category: '',
         minPrice: 0,
@@ -28,6 +30,33 @@ export const ProductProvider = ({ children }) => {
             setLoading(false);
         }
     }, []);
+
+    // Real-time updates
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleProductAdded = (newProduct) => {
+            setProducts(prev => [newProduct, ...prev]);
+        };
+
+        const handleProductUpdated = (updatedProduct) => {
+            setProducts(prev => prev.map(p => p._id === updatedProduct._id ? updatedProduct : p));
+        };
+
+        const handleProductDeleted = (productId) => {
+            setProducts(prev => prev.filter(p => p._id !== productId));
+        };
+
+        socket.on('product_added', handleProductAdded);
+        socket.on('product_updated', handleProductUpdated);
+        socket.on('product_deleted', handleProductDeleted);
+
+        return () => {
+            socket.off('product_added', handleProductAdded);
+            socket.off('product_updated', handleProductUpdated);
+            socket.off('product_deleted', handleProductDeleted);
+        };
+    }, [socket]);
 
     useEffect(() => {
         let result = products;

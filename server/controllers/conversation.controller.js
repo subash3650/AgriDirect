@@ -191,18 +191,20 @@ exports.sendMessage = asyncHandler(async (req, res, next) => {
 
     await conversation.save();
 
+    await conversation.save();
+
     // Emit via Socket.io (if available)
-    const io = req.app.get('io');
+    // Emit via Socket.io
+    const { getIO } = require('../services/socket.service');
+    const io = getIO();
     if (io) {
-        conversation.participants.forEach(p => {
-            if (p.userId.toString() !== sender._id.toString()) {
-                io.to(`user_${p.userId}`).emit('new_message', {
-                    message,
-                    conversation: {
-                        _id: conversation._id,
-                        lastMessage: conversation.lastMessage
-                    }
-                });
+        const roomName = `conversation_${conversation._id.toString()}`;
+        console.log(`[Socket] Emitting new_message to room: ${roomName}`);
+        io.to(roomName).emit('new_message', {
+            message,
+            conversation: {
+                _id: conversation._id,
+                lastMessage: conversation.lastMessage
             }
         });
     }

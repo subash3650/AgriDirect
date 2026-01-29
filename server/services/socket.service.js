@@ -81,7 +81,9 @@ const initializeSocket = (server) => {
 
         // Join specific conversation room
         socket.on('join_conversation', (conversationId) => {
-            socket.join(`conversation_${conversationId}`);
+            const roomName = `conversation_${conversationId.toString()}`;
+            socket.join(roomName);
+            console.log(`[Socket] User ${socket.user?.name} joined ${roomName}`);
         });
 
         // Leave conversation room
@@ -134,8 +136,10 @@ async function joinConversationRooms(socket, userId) {
         });
 
         conversations.forEach(conv => {
-            socket.join(`conversation_${conv._id}`);
+            const roomName = `conversation_${conv._id.toString()}`;
+            socket.join(roomName);
         });
+        console.log(`[Socket] User ${userId} joined ${conversations.length} conversation rooms`);
     } catch (err) {
         console.error('Error joining conversation rooms:', err);
     }

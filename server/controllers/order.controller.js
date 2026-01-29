@@ -134,6 +134,9 @@ exports.verifyOTP = asyncHandler(async (req, res, next) => {
     }
 
     // Reduce stock quantities after successful OTP verification
+    const { getIO } = require('../services/socket.service');
+    const io = getIO();
+
     for (const item of order.items) {
         const product = await Product.findById(item.product);
         if (product) {
@@ -143,6 +146,11 @@ exports.verifyOTP = asyncHandler(async (req, res, next) => {
             }
             product.currentQuantity -= item.quantity;
             await product.save();
+
+            // Broadcast stock update
+            if (io) {
+                io.emit('product_updated', product);
+            }
         }
     }
 

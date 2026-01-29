@@ -21,5 +21,6 @@ const productSchema = new mongoose.Schema({
 
 productSchema.index({ category: 1, isActive: 1 });
 productSchema.index({ owner: 1 });
+productSchema.index({ isActive: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Product', productSchema);

@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { Suspense, lazy } from 'react';
 import { AuthProvider } from './contexts/AuthContext.jsx';
 import { ProductProvider } from './contexts/ProductContext.jsx';
 import { CartProvider } from './contexts/CartContext.jsx';
@@ -6,26 +7,28 @@ import { SocketProvider } from './contexts/SocketContext.jsx';
 import Header from './components/shared/Header.jsx';
 import Footer from './components/shared/Footer.jsx';
 import ProtectedRoute from './components/shared/ProtectedRoute.jsx';
+import LoadingFallback from './components/shared/LoadingFallback.jsx';
 
-import LoginPage from './pages/auth/LoginPage.jsx';
-import SignupPage from './pages/auth/SignupPage.jsx';
+// Lazy load pages
+const LoginPage = lazy(() => import('./pages/auth/LoginPage.jsx'));
+const SignupPage = lazy(() => import('./pages/auth/SignupPage.jsx'));
 
-import FarmerDashboard from './pages/farmer/FarmerDashboard.jsx';
-import ProductManagement from './pages/farmer/ProductManagement.jsx';
-import OrdersManagement from './pages/farmer/OrdersManagement.jsx';
-import FarmerProfilePage from './pages/farmer/FarmerProfilePage.jsx';
-import FarmerMessages from './pages/farmer/FarmerMessages.jsx';
+const FarmerDashboard = lazy(() => import('./pages/farmer/FarmerDashboard.jsx'));
+const ProductManagement = lazy(() => import('./pages/farmer/ProductManagement.jsx'));
+const OrdersManagement = lazy(() => import('./pages/farmer/OrdersManagement.jsx'));
+const FarmerProfilePage = lazy(() => import('./pages/farmer/FarmerProfilePage.jsx'));
+const FarmerMessages = lazy(() => import('./pages/farmer/FarmerMessages.jsx'));
 
-import BuyerDashboard from './pages/buyer/BuyerDashboard.jsx';
-import BrowseProducts from './pages/buyer/BrowseProducts.jsx';
-import ProductDetail from './pages/buyer/ProductDetail.jsx';
-import CartPage from './pages/buyer/CartPage.jsx';
-import OrderHistory from './pages/buyer/OrderHistory.jsx';
-import FeedbackForm from './pages/buyer/FeedbackForm.jsx';
-import ProfilePage from './pages/buyer/ProfilePage.jsx';
-import BuyerMessages from './pages/buyer/BuyerMessages.jsx';
+const BuyerDashboard = lazy(() => import('./pages/buyer/BuyerDashboard.jsx'));
+const BrowseProducts = lazy(() => import('./pages/buyer/BrowseProducts.jsx'));
+const ProductDetail = lazy(() => import('./pages/buyer/ProductDetail.jsx'));
+const CartPage = lazy(() => import('./pages/buyer/CartPage.jsx'));
+const OrderHistory = lazy(() => import('./pages/buyer/OrderHistory.jsx'));
+const FeedbackForm = lazy(() => import('./pages/buyer/FeedbackForm.jsx'));
+const ProfilePage = lazy(() => import('./pages/buyer/ProfilePage.jsx'));
+const BuyerMessages = lazy(() => import('./pages/buyer/BuyerMessages.jsx'));
 
-import FarmerPublicProfile from './pages/public/FarmerPublicProfile.jsx';
+const FarmerPublicProfile = lazy(() => import('./pages/public/FarmerPublicProfile.jsx'));
 
 const HomePage = () => (
     <div className="home-page">
@@ -66,70 +69,72 @@ const UnauthorizedPage = () => (
 function App() {
     return (
         <AuthProvider>
-            <ProductProvider>
-                <CartProvider>
-                    <SocketProvider>
+            <SocketProvider>
+                <ProductProvider>
+                    <CartProvider>
                         <div className="app-container">
                             <Header />
                             <main className="main-content">
-                                <Routes>
-                                    <Route path="/" element={<HomePage />} />
-                                    <Route path="/auth/login" element={<LoginPage />} />
-                                    <Route path="/auth/signup" element={<SignupPage />} />
-                                    <Route path="/unauthorized" element={<UnauthorizedPage />} />
+                                <Suspense fallback={<LoadingFallback />}>
+                                    <Routes>
+                                        <Route path="/" element={<HomePage />} />
+                                        <Route path="/auth/login" element={<LoginPage />} />
+                                        <Route path="/auth/signup" element={<SignupPage />} />
+                                        <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
-                                    <Route path="/farmer/dashboard" element={
-                                        <ProtectedRoute requiredRole="farmer"><FarmerDashboard /></ProtectedRoute>
-                                    } />
-                                    <Route path="/farmer/products" element={
-                                        <ProtectedRoute requiredRole="farmer"><ProductManagement /></ProtectedRoute>
-                                    } />
-                                    <Route path="/farmer/orders" element={
-                                        <ProtectedRoute requiredRole="farmer"><OrdersManagement /></ProtectedRoute>
-                                    } />
-                                    <Route path="/farmer/profile" element={
-                                        <ProtectedRoute requiredRole="farmer"><FarmerProfilePage /></ProtectedRoute>
-                                    } />
-                                    <Route path="/farmer/messages" element={
-                                        <ProtectedRoute requiredRole="farmer"><FarmerMessages /></ProtectedRoute>
-                                    } />
+                                        <Route path="/farmer/dashboard" element={
+                                            <ProtectedRoute requiredRole="farmer"><FarmerDashboard /></ProtectedRoute>
+                                        } />
+                                        <Route path="/farmer/products" element={
+                                            <ProtectedRoute requiredRole="farmer"><ProductManagement /></ProtectedRoute>
+                                        } />
+                                        <Route path="/farmer/orders" element={
+                                            <ProtectedRoute requiredRole="farmer"><OrdersManagement /></ProtectedRoute>
+                                        } />
+                                        <Route path="/farmer/profile" element={
+                                            <ProtectedRoute requiredRole="farmer"><FarmerProfilePage /></ProtectedRoute>
+                                        } />
+                                        <Route path="/farmer/messages" element={
+                                            <ProtectedRoute requiredRole="farmer"><FarmerMessages /></ProtectedRoute>
+                                        } />
 
-                                    <Route path="/buyer/dashboard" element={
-                                        <ProtectedRoute requiredRole="buyer"><BuyerDashboard /></ProtectedRoute>
-                                    } />
-                                    <Route path="/buyer/browse" element={
-                                        <ProtectedRoute requiredRole="buyer"><BrowseProducts /></ProtectedRoute>
-                                    } />
-                                    <Route path="/buyer/product/:id" element={
-                                        <ProtectedRoute requiredRole="buyer"><ProductDetail /></ProtectedRoute>
-                                    } />
-                                    <Route path="/buyer/cart" element={
-                                        <ProtectedRoute requiredRole="buyer"><CartPage /></ProtectedRoute>
-                                    } />
-                                    <Route path="/buyer/orders" element={
-                                        <ProtectedRoute requiredRole="buyer"><OrderHistory /></ProtectedRoute>
-                                    } />
-                                    <Route path="/buyer/feedback/:orderId" element={
-                                        <ProtectedRoute requiredRole="buyer"><FeedbackForm /></ProtectedRoute>
-                                    } />
-                                    <Route path="/buyer/profile" element={
-                                        <ProtectedRoute requiredRole="buyer"><ProfilePage /></ProtectedRoute>
-                                    } />
-                                    <Route path="/buyer/messages" element={
-                                        <ProtectedRoute requiredRole="buyer"><BuyerMessages /></ProtectedRoute>
-                                    } />
+                                        <Route path="/buyer/dashboard" element={
+                                            <ProtectedRoute requiredRole="buyer"><BuyerDashboard /></ProtectedRoute>
+                                        } />
+                                        <Route path="/buyer/browse" element={
+                                            <ProtectedRoute requiredRole="buyer"><BrowseProducts /></ProtectedRoute>
+                                        } />
+                                        <Route path="/buyer/product/:id" element={
+                                            <ProtectedRoute requiredRole="buyer"><ProductDetail /></ProtectedRoute>
+                                        } />
+                                        <Route path="/buyer/cart" element={
+                                            <ProtectedRoute requiredRole="buyer"><CartPage /></ProtectedRoute>
+                                        } />
+                                        <Route path="/buyer/orders" element={
+                                            <ProtectedRoute requiredRole="buyer"><OrderHistory /></ProtectedRoute>
+                                        } />
+                                        <Route path="/buyer/feedback/:orderId" element={
+                                            <ProtectedRoute requiredRole="buyer"><FeedbackForm /></ProtectedRoute>
+                                        } />
+                                        <Route path="/buyer/profile" element={
+                                            <ProtectedRoute requiredRole="buyer"><ProfilePage /></ProtectedRoute>
+                                        } />
+                                        <Route path="/buyer/messages" element={
+                                            <ProtectedRoute requiredRole="buyer"><BuyerMessages /></ProtectedRoute>
+                                        } />
 
-                                    {/* Public Routes (no auth required) */}
-                                    <Route path="/farmer/:farmerId" element={<FarmerPublicProfile />} />
+                                        {/* Public Routes (no auth required) */}
+                                        <Route path="/farmer/:farmerId" element={<FarmerPublicProfile />} />
 
-                                    <Route path="*" element={<Navigate to="/" replace />} />
-                                </Routes>
+                                        <Route path="*" element={<Navigate to="/" replace />} />
+                                    </Routes>
+                                </Suspense>
                             </main>
                             <Footer />
                         </div>
-                    </SocketProvider>
-                </CartProvider>
-            </ProductProvider>
+                    </CartProvider>
+                </ProductProvider>
+            </SocketProvider>
         </AuthProvider>
     );
 }

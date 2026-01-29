@@ -301,18 +301,30 @@ const OrderHistory = () => {
                 {/* OTP Modal */}
                 {otpModal.show && (
                     <div className="modal-overlay" onClick={() => setOtpModal({ show: false, orderId: null, otp: '' })}>
-                        <div className="modal" onClick={e => e.stopPropagation()}>
-                            <h2>Verify Order</h2>
-                            <p>Enter the OTP sent to your email</p>
-                            <div className="form-group">
-                                <input type="text" value={otpModal.otp}
-                                    onChange={e => setOtpModal(prev => ({ ...prev, otp: e.target.value }))}
-                                    className="form-input otp-input" placeholder="Enter 4-digit OTP" maxLength="4" />
+                        <div className="modal otp-verification-modal" onClick={e => e.stopPropagation()}>
+                            <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔐</div>
+                                <h2>Verify Order</h2>
+                                <p className="text-muted">Enter the 4-digit code sent to your email</p>
                             </div>
-                            <div className="modal-actions">
+                            <div className="form-group">
+                                <input
+                                    type="text"
+                                    value={otpModal.otp}
+                                    onChange={e => {
+                                        const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+                                        setOtpModal(prev => ({ ...prev, otp: val }));
+                                    }}
+                                    className="form-input otp-display-input"
+                                    placeholder="• • • •"
+                                />
+                            </div>
+                            <div className="modal-actions" style={{ justifyContent: 'center' }}>
                                 <button onClick={() => setOtpModal({ show: false, orderId: null, otp: '' })}
                                     className="btn btn-secondary">Cancel</button>
-                                <button onClick={handleVerifyOTP} className="btn btn-primary">Verify</button>
+                                <button onClick={handleVerifyOTP} className="btn btn-primary btn-lg" disabled={otpModal.otp.length !== 4}>
+                                    Verify Order
+                                </button>
                             </div>
                         </div>
                     </div>

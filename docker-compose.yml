@@ -9,6 +9,11 @@ services:
       - mongodb_data:/data/db
     networks:
       - agridirect-network
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+    healthcheck:
+      test: "test $$(echo \"rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'mongodb:27017' }] }).ok || rs.status().ok\" | mongo --quiet) -eq 1"
+      interval: 10s
+      start_period: 30s
 
   server:
     build: ./server
@@ -16,12 +21,13 @@ services:
       - "5000:5000"
     environment:
       - PORT=5000
-      - MONGO_URI=mongodb://mongodb:27017/agridirect
+      - MONGO_URI=mongodb://mongodb:27017/agridirect?replicaSet=rs0
       - JWT_SECRET=dev_secret_key_123
       - FRONTEND_URL=http://localhost:3000
       - NODE_ENV=production
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
     networks:
       - agridirect-network
 
