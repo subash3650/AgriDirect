@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
-const buyerSchema = new mongoose.Schema({
+const farmerSchema = new mongoose.Schema({
+
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true, lowercase: true },
     password: { type: String, required: true, minlength: 6, select: false },
@@ -14,28 +15,26 @@ const buyerSchema = new mongoose.Schema({
         coordinates: { type: [Number], default: [] },
         address: { type: String, default: '' }
     },
-    cart: [{
-        product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
-        quantity: { type: Number, default: 1 },
-        price: { type: Number }
-    }],
+    products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
     orders: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Order' }],
     orderHistory: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Order' }],
-    reviews: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Feedback' }]
+    feedback: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Feedback' }],
+    totalOrders: { type: Number, default: 0 },
+    rating: { type: Number, default: 0 }
 }, { timestamps: true });
 
 
-buyerSchema.pre('save', async function (next) {
+farmerSchema.pre('save', async function (next) {
     if (!this.isModified('password')) return next();
     this.password = await bcrypt.hash(this.password, 12);
     next();
 });
 
 
-buyerSchema.methods.comparePassword = async function (candidatePassword) {
+farmerSchema.methods.comparePassword = async function (candidatePassword) {
     return bcrypt.compare(candidatePassword, this.password);
 };
 
-buyerSchema.index({ location: '2dsphere' });
+farmerSchema.index({ location: '2dsphere' });
 
-module.exports = mongoose.model('Buyer', buyerSchema);
+module.exports = mongoose.model('Farmer', farmerSchema);

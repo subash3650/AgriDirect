@@ -102,14 +102,10 @@ exports.clearCart = asyncHandler(async (req, res) => {
     res.json({ success: true, message: 'Cart cleared' });
 });
 
-
 exports.deleteAccount = asyncHandler(async (req, res, next) => {
     const buyer = req.user;
 
-    
     await Promise.all([
-        
-        
         Order.updateMany(
             { buyer: buyer._id },
             { $set: { buyer: null, buyerDeleted: true } }
@@ -118,10 +114,7 @@ exports.deleteAccount = asyncHandler(async (req, res, next) => {
         Feedback.deleteMany({ buyer: buyer._id })
     ]);
 
-    
     await Buyer.findByIdAndDelete(buyer._id);
-
-    
 
     res.json({
         success: true,

@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { Suspense, lazy } from 'react';
 import { AuthProvider } from './contexts/AuthContext.jsx';
 import { ProductProvider } from './contexts/ProductContext.jsx';
@@ -73,6 +74,7 @@ function App() {
                 <ProductProvider>
                     <CartProvider>
                         <div className="app-container">
+                            <Toaster position="top-center" />
                             <Header />
                             <main className="main-content">
                                 <Suspense fallback={<LoadingFallback />}>

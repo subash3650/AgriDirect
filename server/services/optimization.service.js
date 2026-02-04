@@ -1,7 +1,3 @@
-/**
- * Route Optimization Service
- * Implements Nearest Neighbor algorithm for delivery sequence optimization
- */
 
 class RouteOptimizer {
     /**

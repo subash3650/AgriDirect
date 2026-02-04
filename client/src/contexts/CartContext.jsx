@@ -1,6 +1,7 @@
 import { createContext, useState, useCallback, useEffect, useContext } from 'react';
 import { AuthContext } from './AuthContext';
 import * as userService from '../services/user.service';
+import { toast } from 'react-hot-toast';
 
 export const CartContext = createContext();
 
@@ -9,7 +10,7 @@ export const CartProvider = ({ children }) => {
     const [cart, setCart] = useState([]);
     const [loading, setLoading] = useState(false);
 
-    
+
     useEffect(() => {
         if (isAuthenticated && user?.role === 'buyer') {
             setLoading(true);
@@ -23,14 +24,20 @@ export const CartProvider = ({ children }) => {
     }, [isAuthenticated, user]);
 
     const addToCart = useCallback(async (product, quantity) => {
-        if (!isAuthenticated) return Promise.reject(new Error('Please login to add to cart'));
+        if (!isAuthenticated) {
+            toast.error('Please login to add to cart');
+            return Promise.reject(new Error('Please login to add to cart'));
+        }
         try {
             const res = await userService.addToCart(product._id, quantity);
             setCart(res.data.cart);
+            toast.success('Added to cart');
             return res.data;
         } catch (error) {
             console.error('Error adding to cart:', error);
-            throw error; 
+            const message = error.response?.data?.message || 'Failed to add to cart';
+            toast.error(message);
+            throw error;
         }
     }, [isAuthenticated]);
 
@@ -38,8 +45,10 @@ export const CartProvider = ({ children }) => {
         try {
             const res = await userService.removeFromCart(productId);
             setCart(res.data.cart);
+            toast.success('Removed from cart');
         } catch (error) {
             console.error('Error removing from cart:', error);
+            toast.error('Failed to remove item');
         }
     }, []);
 
@@ -52,6 +61,8 @@ export const CartProvider = ({ children }) => {
             setCart(res.data.cart);
         } catch (error) {
             console.error('Error updating quantity:', error);
+            const message = error.response?.data?.message || 'The quantity you entered is exceeding the available stock';
+            toast.error(message);
             throw error;
         }
     }, [removeFromCart]);
@@ -60,8 +71,10 @@ export const CartProvider = ({ children }) => {
         try {
             await userService.clearCart();
             setCart([]);
+            toast.success('Cart cleared');
         } catch (error) {
             console.error('Error clearing cart:', error);
+            toast.error('Failed to clear cart');
         }
     }, []);
 
