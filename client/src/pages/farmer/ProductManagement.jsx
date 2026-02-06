@@ -3,6 +3,7 @@ import { getMyProducts, createProduct, updateProduct, deleteProduct } from '../.
 import LoadingSpinner from '../../components/shared/LoadingSpinner.jsx';
 import Toast, { useToast } from '../../components/shared/Toast.jsx';
 import './Farmer.css';
+import './ResponsiveFixes.css';
 
 const CATEGORIES = ['Vegetables', 'Fruits', 'Grains', 'Dairy', 'Organic', 'Other'];
 
@@ -136,37 +137,43 @@ const ProductManagement = () => {
 
                 {showModal && (
                     <div className="modal-overlay" onClick={() => setShowModal(false)}>
-                        <div className="modal" onClick={e => e.stopPropagation()}>
-                            <h2>{editingProduct ? 'Edit Product' : 'Add New Product'}</h2>
-                            <form onSubmit={handleSubmit}>
-                                <div className="form-group">
-                                    <label>Product Name</label>
-                                    <input type="text" name="productName" value={formData.productName}
-                                        onChange={handleChange} className="form-input" required />
-                                </div>
-                                <div className="form-group">
-                                    <label>Description</label>
-                                    <textarea name="description" value={formData.description}
-                                        onChange={handleChange} className="form-input" rows="3" required />
-                                </div>
-                                <div className="form-row">
+                        <div className="modal modal-fixed" onClick={e => e.stopPropagation()}>
+                            <div className="modal-header">
+                                <h2>{editingProduct ? 'Edit Product' : 'Add New Product'}</h2>
+                                <button className="close-btn" onClick={() => setShowModal(false)}>&times;</button>
+                            </div>
+                            <form onSubmit={handleSubmit} className="modal-form">
+                                <div className="modal-body">
                                     <div className="form-group">
-                                        <label>Category</label>
-                                        <select name="category" value={formData.category} onChange={handleChange} className="form-input">
-                                            {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                                        </select>
+                                        <label>Product Name</label>
+                                        <input type="text" name="productName" value={formData.productName}
+                                            onChange={handleChange} className="form-input" required />
                                     </div>
                                     <div className="form-group">
-                                        <label>Quantity (kg)</label>
-                                        <input type="number" name="quantity" value={formData.quantity}
-                                            onChange={handleChange} className="form-input" required min="1" />
+                                        <label>Description</label>
+                                        <textarea name="description" value={formData.description}
+                                            onChange={handleChange} className="form-input" rows="3" required />
                                     </div>
-                                </div>
-                                <div className="form-row">
-                                    <div className="form-group">
-                                        <label>Price (₹/kg)</label>
-                                        <input type="number" name="price" value={formData.price}
-                                            onChange={handleChange} className="form-input" required min="1" />
+                                    <div className="form-row">
+                                        <div className="form-group">
+                                            <label>Category</label>
+                                            <select name="category" value={formData.category} onChange={handleChange} className="form-input">
+                                                {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Quantity (kg)</label>
+                                            <input type="number" name="quantity" value={formData.quantity}
+                                                onChange={handleChange} className="form-input" required min="1" />
+                                        </div>
+                                    </div>
+                                    <div className="form-row">
+                                        <div className="form-group flex-1">
+                                            <label>Price (₹/kg)</label>
+                                            <input type="number" name="price" value={formData.price}
+                                                onChange={handleChange} className="form-input" required min="1"
+                                                placeholder="e.g. 40" />
+                                        </div>
                                     </div>
                                     <div className="form-group">
                                         <label>Product Image</label>
@@ -174,12 +181,13 @@ const ProductManagement = () => {
                                             <input
                                                 type="file"
                                                 accept="image/*"
+                                                id="file-upload"
                                                 onChange={(e) => {
                                                     const file = e.target.files[0];
                                                     if (file) {
                                                         if (file.size > 2 * 1024 * 1024) {
                                                             error('Image size must be less than 2MB');
-                                                            e.target.value = ''; // Reset input
+                                                            e.target.value = '';
                                                             return;
                                                         }
                                                         const reader = new FileReader();
@@ -189,19 +197,26 @@ const ProductManagement = () => {
                                                         reader.readAsDataURL(file);
                                                     }
                                                 }}
-                                                className="form-input"
+                                                className="file-input-hidden"
+                                                style={{ display: 'none' }}
                                             />
-                                            <p className="help-text">Max size: 2MB. Supported: JPG, PNG, WEBP</p>
+                                            <label htmlFor="file-upload" className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', marginBottom: '0.5rem', display: 'inline-block' }}>
+                                                Choose File
+                                            </label>
+                                            <p className="help-text">Max size: 2MB. Supported: JPG, PNG</p>
+
                                             <div className="url-toggle">
-                                                <small>Or <a href="#" onClick={(e) => {
-                                                    e.preventDefault();
+                                                <span>Or </span>
+                                                <button type="button" className="btn-link" onClick={() => {
                                                     const url = prompt("Enter Image URL:");
                                                     if (url) setFormData(prev => ({ ...prev, image: url }));
-                                                }}>enter URL</a></small>
+                                                }}>enter image URL</button>
                                             </div>
+
                                             {formData.image && (
                                                 <div className="image-preview">
-                                                    <img src={formData.image} alt="Preview" style={{ height: '60px', marginTop: '0.5rem', borderRadius: '4px', objectFit: 'contain' }} />
+                                                    <img src={formData.image} alt="Preview" />
+                                                    <button type="button" className="btn-icon-remove" onClick={() => setFormData(prev => ({ ...prev, image: '' }))}>×</button>
                                                 </div>
                                             )}
                                         </div>

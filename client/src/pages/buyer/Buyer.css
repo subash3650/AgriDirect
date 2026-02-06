@@ -890,7 +890,8 @@
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.8);
+    /* Darker opacity to compensate */
     display: flex;
     align-items: center;
     justify-content: center;

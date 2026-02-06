@@ -9,6 +9,8 @@ import Footer from './components/shared/Footer.jsx';
 import ProtectedRoute from './components/shared/ProtectedRoute.jsx';
 import LoadingFallback from './components/shared/LoadingFallback.jsx';
 
+import AIChatAssistant from './components/ai/AIChatAssistant.jsx';
+
 // Lazy load pages
 const LoginPage = lazy(() => import('./pages/auth/LoginPage.jsx'));
 const SignupPage = lazy(() => import('./pages/auth/SignupPage.jsx'));
@@ -131,6 +133,7 @@ function App() {
                                 </Suspense>
                             </main>
                             <Footer />
+                            <AIChatAssistant />
                         </div>
                     </CartProvider>
                 </ProductProvider>

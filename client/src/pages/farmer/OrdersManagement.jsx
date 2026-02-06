@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getMyOrders, updateOrderStatus, cancelOrder } from '../../services/order.service';
+import { confirmCashPayment } from '../../services/payment.service';
 import { useSocket } from '../../hooks/useSocket';
 import LoadingSpinner from '../../components/shared/LoadingSpinner.jsx';
 import Toast, { useToast } from '../../components/shared/Toast.jsx';
@@ -58,6 +59,17 @@ const OrdersManagement = () => {
         }
     };
 
+    const handleCashConfirmation = async (orderId) => {
+        if (!window.confirm('Confirm that you have received cash payment from the buyer?')) return;
+        try {
+            await confirmCashPayment(orderId);
+            success('Cash payment confirmed & Wallet updated!');
+            fetchOrders();
+        } catch (err) {
+            error(err.response?.data?.message || 'Failed to confirm payment');
+        }
+    };
+
     const filteredOrders = filter === 'all' ? orders : orders.filter(o => o.status === filter);
 
     if (loading) return <LoadingSpinner text="Loading orders..." />;
@@ -78,7 +90,7 @@ const OrdersManagement = () => {
                         </button>
                     </div>
                     <div className="filter-tabs">
-                        {['all', 'pending', 'processing', 'shipped', 'delivered'].map(f => (
+                        {['all', 'pending', 'confirmed', 'processing', 'shipped', 'delivered'].map(f => (
                             <button key={f} onClick={() => setFilter(f)}
                                 className={`filter-tab ${filter === f ? 'active' : ''}`}>
                                 {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -119,7 +131,7 @@ const OrdersManagement = () => {
                                     .map(order => (
                                         <tr key={order._id}>
                                             <td>
-                                                {order.deliverySequence?.sequence ? (
+                                                {order.deliverySequence?.sequence && ['processing', 'shipped'].includes(order.status) ? (
                                                     <div className="sequence-badge" title={`Stop #${order.deliverySequence.sequence}`}>
                                                         #{order.deliverySequence.sequence}
                                                     </div>
@@ -139,7 +151,21 @@ const OrdersManagement = () => {
                                                 <small>{order.buyerDetails?.phno}</small>
                                             </td>
                                             <td>{order.items?.reduce((acc, i) => acc + i.quantity, 0)} kg</td>
-                                            <td className="price-cell">₹{order.totalPrice}</td>
+                                            <td className="price-cell">
+                                                ₹{order.totalPrice}
+                                                {/* Only show payment status for non-cancelled orders with cash payment */}
+                                                {order.paymentMethod === 'cash' && order.status !== 'cancelled' && (
+                                                    <div style={{ fontSize: '0.8rem', color: order.paymentStatus === 'paid' ? 'green' : 'orange' }}>
+                                                        {order.paymentStatus === 'paid' ? '✓ Paid' : 'Cash Pending'}
+                                                    </div>
+                                                )}
+                                                {/* Show online payment status */}
+                                                {order.paymentMethod === 'online' && order.status !== 'cancelled' && (
+                                                    <div style={{ fontSize: '0.8rem', color: order.paymentStatus === 'paid' ? 'green' : 'blue' }}>
+                                                        {order.paymentStatus === 'paid' ? '✓ Online Paid' : 'Online Pending'}
+                                                    </div>
+                                                )}
+                                            </td>
                                             <td>
                                                 <span className={`badge badge-${order.status === 'delivered' ? 'success' :
                                                     order.status === 'cancelled' ? 'danger' :
@@ -149,10 +175,29 @@ const OrdersManagement = () => {
                                             </td>
                                             <td>{new Date(order.createdAt).toLocaleDateString()}</td>
                                             <td>
+                                                {/* Confirmed - Farmer can start processing */}
+                                                {order.status === 'confirmed' && (
+                                                    <div className="action-buttons">
+                                                        <button onClick={() => handleStatusUpdate(order._id, 'processing')}
+                                                            className="btn btn-primary btn-sm">Start Processing</button>
+                                                        <button onClick={() => setCancelModal({ show: true, orderId: order._id, reason: '' })}
+                                                            className="btn btn-outline-danger btn-sm">Cancel</button>
+                                                    </div>
+                                                )}
                                                 {order.status === 'processing' && (
                                                     <div className="action-buttons">
                                                         <button onClick={() => handleStatusUpdate(order._id, 'shipped')}
                                                             className="btn btn-primary btn-sm">Ship</button>
+                                                        {order.buyerDetails?.coordinates?.length === 2 && (
+                                                            <a
+                                                                href={`https://www.google.com/maps/dir/?api=1&destination=${order.buyerDetails.coordinates[1]},${order.buyerDetails.coordinates[0]}`}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="route-link"
+                                                            >
+                                                                Show Route 📍
+                                                            </a>
+                                                        )}
                                                         <button onClick={() => setCancelModal({ show: true, orderId: order._id, reason: '' })}
                                                             className="btn btn-outline-danger btn-sm">Cancel</button>
                                                     </div>
@@ -177,6 +222,22 @@ const OrdersManagement = () => {
                                                         </div>
                                                     </div>
                                                 )}
+                                                {/* Delivered Logic with Cash Confirmation */}
+                                                {order.status === 'delivered' && (
+                                                    <div className="action-buttons">
+                                                        {order.paymentMethod === 'cash' && order.paymentStatus !== 'paid' && (
+                                                            <button
+                                                                onClick={() => handleCashConfirmation(order._id)}
+                                                                className="btn btn-success btn-sm"
+                                                                title="Confirm you received cash from buyer"
+                                                            >
+                                                                Confirm Cash 💰
+                                                            </button>
+                                                        )}
+                                                        <span className="text-muted" style={{ fontSize: '0.9rem' }}>Completed</span>
+                                                    </div>
+                                                )}
+
                                                 {order.status === 'pending' && (
                                                     <div className="action-buttons">
                                                         <span className="pending-text">Awaiting OTP</span>

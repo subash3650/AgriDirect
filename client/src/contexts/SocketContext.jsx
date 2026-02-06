@@ -12,6 +12,34 @@ export const SocketProvider = ({ children }) => {
     const [isConnected, setIsConnected] = useState(false);
     const [notifications, setNotifications] = useState([]);
     const [orderUpdates, setOrderUpdates] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [pendingOrderCount, setPendingOrderCount] = useState(0);
+
+    const fetchCounts = useCallback(async () => {
+        if (!isAuthenticated) return;
+        try {
+            const token = localStorage.getItem('token');
+            const headers = { 'Authorization': `Bearer ${token}` };
+
+            // Fetch Unread Messages
+            const msgRes = await fetch('/api/conversations/unread', { headers });
+            const msgData = await msgRes.json();
+            if (msgData.success) setUnreadCount(msgData.unreadCount);
+
+            // Fetch Pending Orders (Farmer only)
+            if (user?.role === 'farmer') {
+                const orderRes = await fetch('/api/orders/pending-stats', { headers });
+                const orderData = await orderRes.json();
+                if (orderData.success) setPendingOrderCount(orderData.count);
+            }
+        } catch (err) {
+            console.error('Failed to fetch counts:', err);
+        }
+    }, [isAuthenticated, user]);
+
+    useEffect(() => {
+        fetchCounts();
+    }, [fetchCounts]);
 
     useEffect(() => {
         if (!isAuthenticated || !user) return;
@@ -33,7 +61,6 @@ export const SocketProvider = ({ children }) => {
 
         setSocket(newSocket);
 
-        // Store userId in localStorage for ChatModal
         if (user.profileId) {
             localStorage.setItem('userId', user.profileId);
         }
@@ -44,8 +71,13 @@ export const SocketProvider = ({ children }) => {
             newSocket.emit('joinBuyerRoom', user.profileId);
         }
 
+        // --- Notification Listeners with Count Updates ---
+
         newSocket.on('newOrder', (data) => {
             setNotifications(prev => [...prev, { type: 'newOrder', ...data, timestamp: new Date() }]);
+            if (user.role === 'farmer') {
+                setPendingOrderCount(prev => prev + 1);
+            }
         });
 
         newSocket.on('orderUpdated', (data) => {
@@ -54,17 +86,27 @@ export const SocketProvider = ({ children }) => {
 
         newSocket.on('orderStatusUpdated', (data) => {
             setNotifications(prev => [...prev, { type: 'statusUpdate', ...data, timestamp: new Date() }]);
+            // Refresh counts to stay accurate (simple way to handle status changes)
+            if (user.role === 'farmer') fetchCounts();
+        });
+
+        newSocket.on('new_message', (data) => {
+            // Increment unread if message is NOT from me
+            if (data.message.senderId !== user.profileId) {
+                setUnreadCount(prev => prev + 1);
+            }
         });
 
         return () => {
             newSocket.disconnect();
         };
-    }, [isAuthenticated, user]);
+    }, [isAuthenticated, user, fetchCounts]);
 
     const clearNotifications = useCallback(() => setNotifications([]), []);
+    const refreshCounts = useCallback(() => fetchCounts(), [fetchCounts]);
 
     return (
-        <SocketContext.Provider value={{ socket, isConnected, notifications, orderUpdates, clearNotifications }}>
+        <SocketContext.Provider value={{ socket, isConnected, notifications, orderUpdates, clearNotifications, unreadCount, pendingOrderCount, refreshCounts }}>
             {children}
         </SocketContext.Provider>
     );

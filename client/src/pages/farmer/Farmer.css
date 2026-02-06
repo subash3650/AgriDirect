@@ -276,7 +276,8 @@
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.8);
+    /* Darker background to compensate */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -296,22 +297,80 @@
     animation: slideUp 0.3s ease-out;
 }
 
-.modal h2 {
-    margin-bottom: 2rem;
-    color: var(--color-primary-dark);
+/* Fixed Layout Modal (e.g. Products) */
+.modal-fixed {
+    display: flex;
+    flex-direction: column;
+    padding: 0 !important;
+    /* Ensure override */
+    overflow: hidden;
+    height: auto;
+    max-height: 90vh;
+    /* Enforce height cap */
 }
 
-.modal .form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
+.modal-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: white;
+    flex-shrink: 0;
+    /* Never shrink header */
+    z-index: 10;
+}
+
+.close-btn {
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--color-text-light);
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.close-btn:hover {
+    background: #f3f4f6;
+    color: var(--color-danger);
+}
+
+.modal-form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+    /* CRITICAL: Allows flex child to scroll */
+}
+
+.modal-body {
+    padding: 2rem;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+    /* CRITICAL: Allows scroll */
+    overscroll-behavior: contain;
 }
 
 .modal-actions {
     display: flex;
     gap: 1rem;
-    margin-top: 2rem;
+    padding: 1.5rem 2rem;
+    border-top: 1px solid var(--color-border);
     justify-content: flex-end;
+    background: #f9fafb;
+    margin-top: 0;
+    flex-shrink: 0;
+    /* Never shrink footer */
+    z-index: 10;
+    /* Ensure on top */
 }
 
 /* Orders Table */
