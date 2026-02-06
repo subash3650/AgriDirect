@@ -52,4 +52,4 @@ jobs:
         working-directory: client
 
       - name: Build Docker Image (client)
-        run: docker build -f client/Dockerfile -t agridirect-client:ci .
+        run: docker build -t agridirect-client:ci client
