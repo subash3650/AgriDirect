@@ -2,11 +2,13 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useCart } from '../../hooks/useCart';
+import { useSocket } from '../../hooks/useSocket';
 import './Header.css';
 
 const Header = () => {
     const { user, isAuthenticated, logout } = useAuth();
     const { itemCount } = useCart();
+    const { unreadCount, pendingOrderCount } = useSocket();
     const navigate = useNavigate();
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
@@ -41,15 +43,24 @@ const Header = () => {
                             {user?.role === 'farmer' ? (
                                 <>
                                     <Link to="/farmer/products" className="nav-link">My Products</Link>
-                                    <Link to="/farmer/orders" className="nav-link">Orders</Link>
-                                    <Link to="/farmer/messages" className="nav-link">💬 Messages</Link>
+                                    <div className="nav-item-wrapper">
+                                        <Link to="/farmer/orders" className="nav-link">Orders</Link>
+                                        {pendingOrderCount > 0 && <span className="nav-badge">{pendingOrderCount}</span>}
+                                    </div>
+                                    <div className="nav-item-wrapper">
+                                        <Link to="/farmer/messages" className="nav-link">💬 Messages</Link>
+                                        {unreadCount > 0 && <span className="nav-badge">{unreadCount}</span>}
+                                    </div>
                                 </>
                             ) : (
                                 <>
                                     <Link to="/buyer/browse" className="nav-link">Browse</Link>
-                                    <Link to="/buyer/messages" className="nav-link">💬 Messages</Link>
+                                    <div className="nav-item-wrapper">
+                                        <Link to="/buyer/messages" className="nav-link">💬 Messages</Link>
+                                        {unreadCount > 0 && <span className="nav-badge">{unreadCount}</span>}
+                                    </div>
                                     <Link to="/buyer/cart" className="nav-link cart-link">
-                                        🛒 Cart {itemCount > 0 && <span className="cart-badge">{itemCount}</span>}
+                                        🛒 Cart {itemCount > 0 && <span className="nav-badge">{itemCount}</span>}
                                     </Link>
                                 </>
                             )}

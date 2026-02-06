@@ -11,6 +11,7 @@ node_modules/
 .env.test.local
 .env.production.local
 **/.env
+server_deprecated
 
 # Build outputs
 /build
@@ -92,3 +93,12 @@ pids/
 # Miscellaneous
 *.bak
 *.backup
+
+Agridirect.json
+Agridirect.mdm
+Agridirect.png
+
+**/__pycache__/
+**/venv/
+venv/
+env/

@@ -1,0 +1,17 @@
+{
+    "name": "@agridirect/shared",
+    "version": "1.0.0",
+    "description": "Shared utilities for AgriDirect microservices",
+    "main": "index.js",
+    "scripts": {
+        "test": "echo \"No tests\" && exit 0"
+    },
+    "dependencies": {
+        "jsonwebtoken": "^9.0.2",
+        "mongoose": "^8.0.0",
+        "express-validator": "^7.0.1"
+    },
+    "peerDependencies": {
+        "express": "^4.18.2"
+    }
+}

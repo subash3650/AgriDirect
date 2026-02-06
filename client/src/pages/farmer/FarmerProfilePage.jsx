@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import LocationPicker from '../../components/shared/LocationPicker';
+import KYCSection from './KYCSection';
 import './Farmer.css';
 
 const FarmerProfilePage = () => {
@@ -21,6 +22,7 @@ const FarmerProfilePage = () => {
         city: '',
         state: '',
         pin: '',
+        upiId: '',
         location: { type: 'Point', coordinates: [], address: '' }
     });
 
@@ -41,6 +43,7 @@ const FarmerProfilePage = () => {
                         city: data.farmer.city || '',
                         state: data.farmer.state || '',
                         pin: data.farmer.pin || '',
+                        upiId: data.farmer.upiId || '',
                         location: data.farmer.location || { type: 'Point', coordinates: [], address: '' }
                     });
                 }
@@ -149,6 +152,20 @@ const FarmerProfilePage = () => {
                                 <label>PIN Code</label>
                                 <input type="text" name="pin" value={formData.pin} onChange={handleChange} className="form-input" />
                             </div>
+                            <div className="form-group">
+                                <label>UPI ID (for receiving payments)</label>
+                                <input
+                                    type="text"
+                                    name="upiId"
+                                    value={formData.upiId}
+                                    onChange={handleChange}
+                                    className="form-input"
+                                    placeholder="yourname@upi or yourname@paytm"
+                                />
+                                <small style={{ color: '#666', display: 'block', marginTop: '0.25rem' }}>
+                                    Enter your UPI ID to receive direct payments via QR code
+                                </small>
+                            </div>
                         </div>
                     </div>
 
@@ -180,6 +197,8 @@ const FarmerProfilePage = () => {
                         {saving ? 'Saving...' : 'Save Profile'}
                     </button>
                 </form>
+
+                <KYCSection farmerId={profile?._id} />
 
                 <div style={{ marginTop: '2rem', padding: '1.5rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px' }}>
                     <h3 style={{ color: '#dc2626' }}>⚠️ Danger Zone</h3>

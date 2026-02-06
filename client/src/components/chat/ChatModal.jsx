@@ -3,7 +3,7 @@ import { useSocket } from '../../hooks/useSocket';
 import './Chat.css';
 
 const ChatModal = ({ recipientId, recipientType, recipientName, conversationId: existingConvId, onClose }) => {
-    const { socket, isConnected } = useSocket();
+    const { socket, isConnected, refreshCounts } = useSocket();
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(true);
@@ -33,6 +33,7 @@ const ChatModal = ({ recipientId, recipientType, recipientName, conversationId: 
                     if (data.success) {
                         setMessages(data.messages);
                         setConversationId(existingConvId);
+                        refreshCounts(); // Refresh unread count
                     }
                 } else {
                     // Create or get existing conversation with recipient
@@ -58,6 +59,7 @@ const ChatModal = ({ recipientId, recipientType, recipientName, conversationId: 
                             const msgData = await msgResponse.json();
                             if (msgData.success) {
                                 setMessages(msgData.messages);
+                                refreshCounts(); // Refresh unread count
                             }
                         }
                     }
@@ -89,7 +91,12 @@ const ChatModal = ({ recipientId, recipientType, recipientName, conversationId: 
 
         const handleNewMessage = (data) => {
             if (data.message.conversationId === conversationId) {
-                setMessages(prev => [...prev, data.message]);
+                // Avoid duplicate messages
+                setMessages(prev => {
+                    const exists = prev.some(m => m._id === data.message._id);
+                    if (exists) return prev;
+                    return [...prev, data.message];
+                });
             }
         };
 

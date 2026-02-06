@@ -7,6 +7,7 @@ export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
     const [user, setUserState] = useState(null);
+    const [token, setTokenState] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const navigate = useNavigate();
@@ -16,6 +17,7 @@ export const AuthProvider = ({ children }) => {
         const storedToken = getToken();
         if (storedToken && storedUser) {
             setUserState(storedUser);
+            setTokenState(storedToken);
         }
         setLoading(false);
     }, []);
@@ -24,10 +26,11 @@ export const AuthProvider = ({ children }) => {
         try {
             setError(null);
             const response = await authService.login(email, password);
-            const { token, user: userData } = response.data;
-            setToken(token);
+            const { token: authToken, user: userData } = response.data;
+            setToken(authToken);
             setUser(userData);
             setUserState(userData);
+            setTokenState(authToken);
             navigate(userData.role === 'farmer' ? '/farmer/dashboard' : '/buyer/browse');
             return { success: true };
         } catch (err) {
@@ -41,10 +44,11 @@ export const AuthProvider = ({ children }) => {
         try {
             setError(null);
             const response = await authService.register(formData);
-            const { token, user: userData } = response.data;
-            setToken(token);
+            const { token: authToken, user: userData } = response.data;
+            setToken(authToken);
             setUser(userData);
             setUserState(userData);
+            setTokenState(authToken);
             navigate(userData.role === 'farmer' ? '/farmer/dashboard' : '/buyer/browse');
             return { success: true };
         } catch (err) {
@@ -56,6 +60,7 @@ export const AuthProvider = ({ children }) => {
 
     const logout = useCallback(() => {
         setUserState(null);
+        setTokenState(null);
         clearAuth();
         navigate('/auth/login');
     }, [navigate]);
@@ -63,7 +68,7 @@ export const AuthProvider = ({ children }) => {
     const isAuthenticated = !!user;
 
     return (
-        <AuthContext.Provider value={{ user, loading, error, isAuthenticated, login, signup, logout, setError }}>
+        <AuthContext.Provider value={{ user, token, loading, error, isAuthenticated, login, signup, logout, setError }}>
             {children}
         </AuthContext.Provider>
     );
