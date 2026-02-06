@@ -9,36 +9,47 @@ on:
 jobs:
   build-server:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./server
     steps:
       - uses: actions/checkout@v4
+
       - name: Use Node.js 18
         uses: actions/setup-node@v4
         with:
           node-version: 18
           cache: "npm"
-          cache-dependency-path: server/package-lock.json
-      - run: npm ci
-      - run: npm test --if-present
-      - name: Build Docker Image (Test)
-        run: docker build .
+          cache-dependency-path: services/auth/package-lock.json
+
+      - name: Install dependencies (auth)
+        run: npm ci
+        working-directory: services/auth
+
+      - name: Test (auth)
+        run: npm test --if-present
+        working-directory: services/auth
+
+      - name: Build Docker Image (auth)
+        # run from repo root, point to Dockerfile in services/auth so Docker context includes services/shared
+        run: docker build -f services/auth/Dockerfile -t agridirect-auth:ci .
 
   build-client:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./client
     steps:
       - uses: actions/checkout@v4
+
       - name: Use Node.js 18
         uses: actions/setup-node@v4
         with:
           node-version: 18
           cache: "npm"
           cache-dependency-path: client/package-lock.json
-      - run: npm ci
-      - run: npm run build
-      - name: Build Docker Image (Test)
-        run: docker build .
+
+      - name: Install dependencies (client)
+        run: npm ci
+        working-directory: client
+
+      - name: Build client
+        run: npm run build
+        working-directory: client
+
+      - name: Build Docker Image (client)
+        run: docker build -f client/Dockerfile -t agridirect-client:ci .
